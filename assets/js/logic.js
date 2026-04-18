@@ -864,6 +864,21 @@ function buildSheet(sid){
     }
   }
 
+  // Grammar goals coverage
+  let grammarNote = '';
+  if(ev.unit && sEv.grammarChecked?.[ev.unit]){
+    const uq = UQ[ev.unit]; const gc = sEv.grammarChecked[ev.unit];
+    const checked = uq.grammar.filter((_, i) => gc[i]);
+    const unchecked = uq.grammar.filter((_, i) => !gc[i]);
+    if(unchecked.length === 0){
+      grammarNote = `<span class="fs-q-ok">✨ Goal met: Used all target grammar (${checked.join(', ')})</span>`;
+    } else if(checked.length > 0) {
+      grammarNote = `<span class="fs-q-warn" style="color:var(--purple);font-weight:700">📌 Used: ${checked.join(', ')} · Missing: ${unchecked.join(', ')}</span>`;
+    } else {
+      grammarNote = `<span class="fs-q-miss" style="color:var(--red);font-weight:700">❌ Goal: Try to incorporate ${unchecked.join(', ')}</span>`;
+    }
+  }
+
   // Rubric rows
   const rubrRows = CRITERIA.map(crit => {
     const bank = BANKS[crit]; const score = sEv.scores[crit] ?? null;
@@ -896,7 +911,7 @@ function buildSheet(sid){
       <div><div class="fs-stu-name">${s.fn} ${s.ln}</div><div class="fs-stu-email">${s.email || ''}</div></div>
       <div class="fs-score-center"><div class="fs-score-num">${tot !== null ? tot : '—'}</div><div class="fs-score-of">/ 16 points</div>${tot !== null ? `<div class="fs-score-pct" style="color:${pass ? '#16a34a' : '#dc2626'}">${pct}%</div><div class="fs-badge ${pass ? 'pass' : 'fail'}">${pass ? '✓ PASS' : '✕ FAIL'}</div>` : ''}</div>
     </div>
-    ${questNote ? `<div class="fs-q-coverage">${questNote}</div>` : ''}
+    ${(questNote || grammarNote) ? `<div class="fs-q-coverage">${questNote}${questNote && grammarNote ? '<br>' : ''}${grammarNote}</div>` : ''}
     <div class="fs-section-lbl">Assessment Criteria</div>
     <table class="fs-table"><thead><tr><th style="width:30%">Criterion</th><th style="width:9%;text-align:center">Score</th><th style="width:18%">Band</th><th>Description</th></tr></thead><tbody>${rubrRows}${totalRow}</tbody></table>
     ${commentBlocks || custom || synth ? `<div class="fs-section-lbl">Analysis &amp; Observations</div><div class="fs-comments">${commentBlocks}</div>${synth ? `<div class="fs-custom" style="background:#f5f3ff;border-color:#c4b5fd;color:#4c1d95;margin-bottom:8px"><strong>Teacher observation:</strong> ${synth}</div>` : ''}` : ''}
