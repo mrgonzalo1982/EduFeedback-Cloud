@@ -553,7 +553,7 @@ function buildTimerHTML(sid){
         <button class="timer-btn" onclick="resetTimer('${sid}')" title="Reset">↺</button>
       </div>
     </div>
-    <div class="timer-bar-wrap"><div class="timer-bar-fill" id="tbar-${sid}" style="width:${barPct}%;background:${barCol}"></div><div class="timer-target-line" title="60s target"></div></div>
+    <div class="timer-bar-wrap" onclick="setTimerByClick('${sid}', event)"><div class="timer-bar-fill" id="tbar-${sid}" style="width:${barPct}%;background:${barCol}"></div><div class="timer-target-line" title="60s target"></div></div>
     <div class="timer-label-row"><span>0s</span><span class="timer-label-60" style="color:var(--green)">60s</span><span>75s+</span></div>`;
 }
 
@@ -563,19 +563,22 @@ function toggleTimer(sid){
   const t = TIMERS[sid];
   if(t.running){ clearInterval(t.iid); t.running = false; }
   else {
-    // Check requirements before starting
-    const sEv = getStuEv(sid);
-    const unit = getEv().unit;
-    const qc = sEv.questChecked?.[unit] || { main: [], followUp: null };
-    const mainChecked = qc.main.filter(Boolean).length;
-    if(mainChecked < UQ[unit].main.length || qc.followUp === null) {
-      showToast('❌ Answer all task questions first!', 'var(--red)');
-      return;
-    }
-    
     t.running = true;
     t.iid = setInterval(() => { t.elapsed++; updateTimerUI(sid); }, 1000);
   }
+  updateTimerUI(sid);
+}
+
+function setTimerByClick(sid, e){
+  const wrap = e.currentTarget;
+  const rect = wrap.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const pct = Math.max(0, Math.min(x / rect.width, 1));
+  const newElapsed = Math.round(pct * 75); // Target 75s scale
+  
+  if(!TIMERS[sid]) TIMERS[sid] = { elapsed: 0, running: false, iid: null };
+  TIMERS[sid].elapsed = newElapsed;
+  markUnsaved();
   updateTimerUI(sid);
 }
 
