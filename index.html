@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EduFeedback v2 — Personalized AI Assessment</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <style>
+    /* Login Screen Styles */
+    #screen-login { 
+      display: none; 
+      height: 100vh; 
+      align-items: center; 
+      justify-content: center; 
+      background: radial-gradient(circle at top right, var(--bg3), var(--bg));
+    }
+    #screen-login.active { display: flex; }
+    .login-card { 
+      background: var(--bg2); 
+      padding: 40px; 
+      border-radius: 20px; 
+      border: 1px solid var(--border); 
+      text-align: center; 
+      max-width: 400px; 
+      width: 90%;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+    .login-logo { font-size: 32px; font-weight: 800; margin-bottom: 30px; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- LOGIN SCREEN -->
+  <div id="screen-login" class="screen">
+    <div class="login-card">
+      <div class="login-logo">🎓 EduFeedback</div>
+      <p style="color:var(--text2); margin-bottom: 30px;">Sign in with your university account to sync your courses and evaluations.</p>
+      <button class="btn btn-primary" style="width:100%; padding:14px; font-size:16px" onclick="handleLogin()">Sign in with Google</button>
+      <div style="margin-top:20px; font-size:12px; color:var(--text3)">
+        <p>Your data is stored securely in Firebase.</p>
+        <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="openModal('modal-firebase')">⚙ Setup Cloud Credentials</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header id="hdr">
+    <div class="logo">🎓 EduFeedback <span class="logo-tag">v2</span></div>
+    <nav id="breadcrumb" class="breadcrumb"></nav>
+    <div class="hdr-btns">
+      <span id="ai-status-badge" class="ai-badge ai-off" onclick="openAIModal()" title="Configure AI Feedback">🤖 AI: OFF</span>
+      <button class="btn btn-ghost btn-sm" onclick="exportData()">⬇ <span>Export</span></button>
+      <button class="btn btn-ghost btn-sm" onclick="triggerImport()">⬆ <span>Import</span></button>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)"/>
+    </div>
+  </header>
+
+  <!-- DASHBOARD -->
+  <div id="screen-dashboard" class="screen active">
+    <div class="scr-inner">
+      <div class="dash-hdr">
+        <div>
+          <h1 class="dash-title">Class Dashboard</h1>
+          <p class="dash-sub" id="dash-prog"></p>
+        </div>
+        <select class="select-inp" id="level-sel" onchange="onLevelChange()">
+          <option value="6">Level 6</option>
+          <option value="7" disabled>Level 7 — Coming Soon</option>
+        </select>
+      </div>
+      <div class="tabs" id="section-tabs" style="margin-bottom:20px"></div>
+      <div class="dash-layout">
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:13px">
+            <span style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px">Evaluation Groups</span>
+          </div>
+          <div class="groups-grid" id="groups-grid"></div>
+          <div class="stats-bar" id="stats-bar" style="display:none"></div>
+        </div>
+        <div class="unassigned-panel">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+            <div class="ua-title" style="margin-bottom:0">Students</div>
+            <button class="btn btn-ghost btn-sm" onclick="triggerStudentUpload()" title="Upload CSV">📤 Upload</button>
+          </div>
+          <div class="ua-list" id="ua-list"></div>
+          <div class="sel-bar" id="sel-bar" style="display:none">
+            <div class="sel-count" id="sel-count"></div>
+            <button class="btn btn-primary" id="btn-create-grp" style="width:100%" onclick="openCreateModal()" disabled>Create Group</button>
+          </div>
+          <button class="btn btn-secondary" id="btn-start-sel" style="width:100%;margin-top:6px" onclick="startSelecting()">+ New Group</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EVALUATION -->
+  <div id="screen-evaluation" class="screen">
+    <div class="eval-hdr">
+      <button class="btn btn-ghost btn-sm" onclick="goToDash()">← Back</button>
+      <div>
+        <div class="eval-group-name" id="eval-group-name"></div>
+        <div class="eval-meta" id="eval-meta"></div>
+      </div>
+      <div class="unit-sel">
+        <label>Unit</label>
+        <button class="unit-btn" id="ubtn7" onclick="selectUnit(7)">Unit 7</button>
+        <button class="unit-btn" id="ubtn8" onclick="selectUnit(8)">Unit 8</button>
+      </div>
+      <div class="eval-hdr-right">
+        <button class="btn btn-ghost btn-sm" onclick="saveEval()">💾 Save</button>
+        <button class="btn btn-primary btn-sm" onclick="printAll()">🖨 Print All</button>
+      </div>
+    </div>
+    <div class="stabs" id="stabs"><div class="stabs-inner" id="stabs-inner"></div></div>
+    <div id="students-grid"></div>
+    <div class="eval-savebar">
+      <span class="save-status" id="save-status" style="color:var(--text3)">Ready</span>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="saveEval()">💾 Save</button>
+        <button class="btn btn-primary" onclick="printAll()">🖨 Print All Feedback Sheets</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Create Group -->
+  <div class="modal-overlay" id="modal-group">
+    <div class="modal-box">
+      <div class="modal-title">Create New Group</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Review selected students and name the group.</p>
+      <div id="modal-stu-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px"></div>
+      <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">Group name</label>
+      <input type="text" class="inp" id="grp-name-inp" placeholder="e.g. Group 1, Team Alpha…" style="margin-bottom:12px"/>
+      <!-- Exceptional size checkbox -->
+      <label id="exceptional-label" style="display:flex;align-items:flex-start;gap:9px;padding:10px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:var(--rsm);cursor:pointer;margin-bottom:4px">
+        <input type="checkbox" id="chk-exceptional" onchange="toggleExceptional()" style="margin-top:2px;accent-color:var(--amber);width:14px;height:14px;flex-shrink:0"/>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--amber)">⚠ Exceptional group size</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:1px">Enable to create a group of 1 or 4 students (e.g. absent classmate or extra student).</div>
+        </div>
+      </label>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeModal('modal-group')">Cancel</button>
+        <button class="btn btn-primary" id="btn-confirm-grp" onclick="confirmCreateGroup()">Create Group</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Delete Confirm -->
+  <div class="modal-overlay" id="modal-delete">
+    <div class="modal-box" style="max-width:340px">
+      <div class="modal-title">Delete Group?</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px">This will remove the group and all evaluation data. This cannot be undone.</p>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeModal('modal-delete')">Cancel</button>
+        <button class="btn" style="background:var(--red-b);color:var(--red);border:1px solid var(--red-br)" onclick="confirmDeleteGroup()">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: AI Settings -->
+  <div class="modal-overlay" id="modal-ai">
+    <!-- ... existing ai modal ... -->
+  </div>
+
+  <!-- MODAL: Firebase Setup -->
+  <div class="modal-overlay" id="modal-firebase">
+    <div class="modal-box" style="max-width:550px">
+      <div class="modal-title">Cloud Setup (Firebase)</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px">To enable multi-device sync, paste your Firebase Web App configuration from the Firebase Console.</p>
+      
+      <div style="background:var(--bg3); padding:12px; border-radius:8px; font-size:11px; color:var(--text3); margin-bottom:14px; border:1px solid var(--border)">
+        <p><strong>How to get this:</strong></p>
+        <ol style="padding-left:18px; margin-top:4px">
+          <li>Go to <a href="https://console.firebase.google.com/" target="_blank" style="color:var(--purple)">Firebase Console</a>.</li>
+          <li>Project Settings > General.</li>
+          <li>Under "Your apps", select your Web App (or create one).</li>
+          <li>Copy the <code>firebaseConfig</code> object.</li>
+        </ol>
+      </div>
+
+      <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">Paste Config JSON</label>
+      <textarea id="fb-config-inp" class="inp" style="height:150px; font-family:monospace; font-size:11px" placeholder='{ "apiKey": "...", "authDomain": "...", ... }'></textarea>
+      
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeModal('modal-firebase')">Cancel</button>
+        <button class="btn btn-primary" onclick="window.saveFirebaseConfig()">Save & Connect</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Student Upload -->
+  <div class="modal-overlay" id="modal-upload-students">
+    <div class="modal-box" style="max-width:550px">
+      <div class="modal-title">Upload Course Students</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Upload a CSV file to define your own classes and student lists.</p>
+      
+      <div style="background:var(--bg3); padding:12px; border-radius:8px; font-size:11px; color:var(--text3); margin-bottom:14px; border:1px solid var(--border)">
+        <p><strong>Required CSV Headers:</strong></p>
+        <code style="display:block; background:rgba(0,0,0,0.3); padding:8px; color:var(--text); margin-top:4px">Level,Section,FirstName,LastName,Email</code>
+        <p style="margin-top:8px"><em>Example:</em><br><code>6,1,Akash,Di Fazio,akdifazio@uai.cl</code></p>
+      </div>
+
+      <input type="file" id="stu-csv-inp" accept=".csv" style="display:none" onchange="handleStudentCSV(event)"/>
+      <button class="btn btn-secondary" style="width:100%; border-style:dashed" onclick="document.getElementById('stu-csv-inp').click()">📁 Select CSV File</button>
+      
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeModal('modal-upload-students')">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- SCRIPTS -->
+<script src="assets/js/data.js"></script>
+<script src="assets/js/logic.js"></script>
+<script src="assets/js/ai.js"></script>
+
+<script type="module">
+  import { initFirebase, loginWithGoogle, logout, currentUser, saveToCloud, saveGroqKeyToCloud } from './assets/js/db.js';
+
+  // Make them available globally for the logic.js to call
+  window.handleLogin = async () => {
+    try {
+      await loginWithGoogle();
+    } catch (e) {
+      alert("Login failed. Check console.");
+    }
+  };
+
+  window.handleLogout = async () => {
+    await logout();
+  };
+
+  window.saveFirebaseConfig = () => {
+    const raw = document.getElementById('fb-config-inp').value.trim();
+    try {
+      // Clean up if they pasted the whole variable declaration
+      let cleaned = raw;
+      if (raw.includes('const firebaseConfig =')) {
+        cleaned = raw.split('=')[1].trim().replace(/;$/, '');
+      }
+      // Very basic validation as it might not be perfect JSON if copied from JS
+      // We'll try to use Function to parse it safely if it's a JS object literal
+      const config = new Function(`return ${cleaned}`)();
+      
+      localStorage.setItem('ef_firebase_config', JSON.stringify(config));
+      showToast("Config saved! Reloading...", "var(--green)");
+      setTimeout(() => location.reload(), 1000);
+    } catch (e) {
+      alert("Invalid configuration format. Please paste the object exactly as provided by Firebase.");
+    }
+  };
+
+  window.onUserLogin = (user) => {
+    console.log("Logged in as:", user.email);
+    showScreen('dashboard');
+    renderDash();
+  };
+
+  window.onUserLogout = () => {
+    showScreen('login');
+  };
+
+  window.triggerStudentUpload = () => {
+    openModal('modal-upload-students');
+  };
+
+  window.handleStudentCSV = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: function(results) {
+        const data = results.data;
+        if (!data || data.length === 0) { alert("Empty or invalid CSV."); return; }
+        
+        // Transform to our internal structure
+        const newStudents = {};
+        data.forEach((row, i) => {
+          const l = row.Level || row.level;
+          const s = row.Section || row.section;
+          if (!l || !s) return;
+          
+          if (!newStudents[l]) newStudents[l] = {};
+          if (!newStudents[l][s]) newStudents[l][s] = [];
+          
+          newStudents[l][s].push({
+            id: `u-${l}-${s}-${i}`,
+            fn: row.FirstName || row.firstName || row.name || 'Student',
+            ln: row.LastName || row.lastName || '',
+            email: row.Email || row.email || ''
+          });
+        });
+        
+        if (Object.keys(newStudents).length > 0) {
+          window.STUDENTS = newStudents;
+          window.ST.level = Object.keys(newStudents)[0];
+          window.ST.section = Object.keys(newStudents[window.ST.level])[0];
+          
+          window.persist();
+          window.renderSectionTabs();
+          window.renderDash();
+          
+          closeModal('modal-upload-students');
+          showToast("Course uploaded successfully!", "var(--green)");
+        } else {
+          alert("Could not find Level or Section columns in CSV.");
+        }
+      }
+    });
+    e.target.value = ''; // Reset input
+  };
+
+  // Check for stored config or ask user
+  const hardcodedConfig = {
+    apiKey: "AIzaSyAcNl8fSmV7Wv14vTDH2XmHFMaNqYsOTac",
+    authDomain: "feedback-uai.firebaseapp.com",
+    projectId: "feedback-uai",
+    storageBucket: "feedback-uai.firebasestorage.app",
+    messagingSenderId: "259206115",
+    appId: "1:259206115:web:9126f26800d4db26fe0ed6",
+    measurementId: "G-VGN4316CZ3"
+  };
+
+  const storedConfig = localStorage.getItem('ef_firebase_config');
+  const configToUse = storedConfig ? JSON.parse(storedConfig) : hardcodedConfig;
+
+  if (configToUse) {
+    initFirebase(configToUse);
+  } else {
+    showScreen('login'); 
+  }
+
+  // Override persist in logic.js to also save to cloud
+  const oldPersist = window.persist;
+  window.persist = () => {
+    oldPersist();
+    if (currentUser) {
+      saveToCloud({
+        groups: ST.groups,
+        evals: ST.evals
+      });
+    }
+  };
+
+  // Override AI Setup to save to cloud
+  const oldSaveAI = window.saveAISettings;
+  window.saveAISettings = () => {
+    const qKey = document.getElementById('ai-key-groq').value.trim();
+    if (qKey && currentUser) {
+      saveGroqKeyToCloud(qKey);
+    }
+    oldSaveAI();
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    init();
+    // If not logged in after init, show login
+    if (!currentUser && !storedConfig) showScreen('login');
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+# Local configuration and logs
+.DS_Store
+*.log
+*.tmp
+
+# Workspace settings
+.vscode/
+
+# Build artifacts
+dist/
+node_modules/
