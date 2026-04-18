@@ -432,7 +432,11 @@ function renderStudentTabs(){
 function switchTab(i){
   ST.activeTab = i;
   document.querySelectorAll('.stab').forEach((t, idx) => t.classList.toggle('active', idx === i));
-  document.querySelectorAll('.scol').forEach((c, idx) => c.classList.toggle('active', idx === i));
+  document.querySelectorAll('.scol').forEach((c, idx) => {
+    const isActive = idx === i;
+    c.classList.toggle('active', isActive);
+    if(isActive) window.scrollTo({top: 0, behavior: 'instant'}); 
+  });
 }
 
 function renderStudentsGrid(){
