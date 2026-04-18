@@ -62,37 +62,47 @@
 
   <!-- DASHBOARD -->
   <div id="screen-dashboard" class="screen active">
-    <div class="scr-inner">
-      <div class="dash-hdr">
-        <div>
-          <h1 class="dash-title">Class Dashboard</h1>
-          <p class="dash-sub" id="dash-prog"></p>
+    <!-- DASH HERO -->
+    <div class="dash-hero">
+      <div class="dash-hero-inner">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px">
+          <div>
+            <h1 class="dash-title">Class Dashboard</h1>
+            <p class="dash-sub" id="dash-prog"></p>
+          </div>
+          <select class="select-inp" id="level-sel" onchange="onLevelChange()" style="padding:10px 16px; min-width:140px; background:var(--glass-bg); backdrop-filter:var(--glass-blur); border-color:var(--glass-border)">
+            <option value="6">Level 6</option>
+            <option value="7" disabled>Level 7 — Soon</option>
+          </select>
         </div>
-        <select class="select-inp" id="level-sel" onchange="onLevelChange()">
-          <option value="6">Level 6</option>
-          <option value="7" disabled>Level 7 — Coming Soon</option>
-        </select>
+        
+        <!-- NEW TOP STATS GRID -->
+        <div id="stats-grid" class="stats-grid"></div>
+
+        <div class="tabs" id="section-tabs"></div>
       </div>
-      <div class="tabs" id="section-tabs" style="margin-bottom:20px"></div>
+    </div>
+
+    <div class="scr-inner" style="padding-top:0">
       <div class="dash-layout">
         <div>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:13px">
-            <span style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px">Evaluation Groups</span>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;margin-top:20px">
+            <span style="font-size:12px;font-weight:800;color:var(--purple-l);text-transform:uppercase;letter-spacing:1px">Evaluation Groups</span>
           </div>
           <div class="groups-grid" id="groups-grid"></div>
-          <div class="stats-bar" id="stats-bar" style="display:none"></div>
         </div>
-        <div class="unassigned-panel">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
-            <div class="ua-title" style="margin-bottom:0">Students</div>
-            <button class="btn btn-ghost btn-sm" onclick="triggerStudentUpload()" title="Upload CSV">📤 Upload</button>
+        
+        <div class="unassigned-panel" style="margin-top:20px; background:var(--glass-bg); backdrop-filter:var(--glass-blur); border-color:var(--glass-border)">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px">
+            <div class="ua-title" style="margin-bottom:0; color:var(--purple-l)">Class Roster</div>
+            <button class="btn btn-ghost btn-sm" onclick="triggerStudentUpload()" title="Upload CSV" style="border-radius:20px">📤 Upload</button>
           </div>
           <div class="ua-list" id="ua-list"></div>
-          <div class="sel-bar" id="sel-bar" style="display:none">
+          <div class="sel-bar" id="sel-bar" style="display:none; background:rgba(139,92,246,0.1); border:1px solid var(--pglow)">
             <div class="sel-count" id="sel-count"></div>
-            <button class="btn btn-primary" id="btn-create-grp" style="width:100%" onclick="openCreateModal()" disabled>Create Group</button>
+            <button class="btn btn-primary" id="btn-create-grp" style="width:100%; border-radius:20px" onclick="openCreateModal()" disabled>Create Group</button>
           </div>
-          <button class="btn btn-secondary" id="btn-start-sel" style="width:100%;margin-top:6px" onclick="startSelecting()">+ New Group</button>
+          <button class="btn btn-secondary" id="btn-start-sel" style="width:100%;margin-top:6px; border-radius:20px" onclick="startSelecting()">+ New Group</button>
         </div>
       </div>
     </div>

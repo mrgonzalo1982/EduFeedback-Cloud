@@ -176,24 +176,24 @@ function renderGroupCard(g){
     const pass = tot !== null && tot >= 10;
     return `
       <div class="gc-student">
-        <div class="ava" style="background:${avatarGrad(sid)}">${initials(s.fn, s.ln)}</div>
+        <div class="ava" style="background:${avatarGrad(sid)}; font-size:9px; border:1px solid rgba(255,255,255,0.1)">${initials(s.fn, s.ln)}</div>
         <span class="gc-student-name">${s.fn} ${s.ln}</span>
-        ${tot !== null ? `<span class="badge ${pass ? 'bdg-pass' : 'bdg-fail'}">${tot}/16</span>` : ''}
+        ${tot !== null ? `<span class="badge ${pass ? 'bdg-pass' : 'bdg-fail'}" style="font-size:9px; padding:1px 6px">${tot}/16</span>` : ''}
       </div>`;
   }).join('');
   
   return `
     <div class="group-card${done ? ' done' : ''}" onclick="openGroupEval('${g.id}')">
-      <div class="gc-top">
-        <span class="gc-name">${g.name}</span>
+      <div class="gc-top" style="margin-bottom:14px">
+        <span class="gc-name" style="font-size:15px; letter-spacing:-0.2px">${g.name}</span>
         <span class="badge ${done ? 'bdg-done' : 'bdg-pend'}">${done ? '✓ Done' : 'Pending'}</span>
       </div>
-      ${done ? `<div style="font-size:11px;color:var(--text2);margin-bottom:8px">Unit ${ev.unit} · ${ev.date || ''}</div>` : ''}
-      <div class="gc-students">${stuCards}</div>
-      <div class="gc-foot" onclick="event.stopPropagation()">
+      ${done ? `<div style="font-size:11px;color:var(--text3);margin-bottom:12px;display:flex;align-items:center;gap:4px"><span>🗓 Unit ${ev.unit}</span> · <span>${ev.date || ''}</span></div>` : ''}
+      <div class="gc-students" style="gap:8px">${stuCards}</div>
+      <div class="gc-foot" onclick="event.stopPropagation()" style="border-top:1px solid var(--glass-border); margin-top:16px; padding-top:14px">
         <div style="display:flex;gap:6px">
-          <button class="btn btn-secondary btn-sm" style="flex:1" onclick="openGroupEval('${g.id}')">${done ? '✏️ Edit' : '▶ Start Evaluation'}</button>
-          <button class="btn btn-ghost btn-sm" onclick="askDelete('${g.id}')" title="Delete">🗑</button>
+          <button class="btn btn-secondary btn-sm" style="flex:1; border-radius:12px" onclick="openGroupEval('${g.id}')">${done ? '✏️ Edit Eval' : '▶ Start Assessment'}</button>
+          <button class="btn btn-ghost btn-sm" onclick="askDelete('${g.id}')" title="Delete" style="border-radius:12px">🗑</button>
         </div>
       </div>
     </div>`;
@@ -225,25 +225,29 @@ function renderUnassigned(ids){
 }
 
 function renderStats(groups){
-  const bar = document.getElementById('stats-bar');
-  if(!bar) return;
-  const evaluatedGroups = groups.filter(g => ST.evals[g.id]?.unit);
-  if(evaluatedGroups.length === 0){
-    bar.style.display = 'none';
-    return;
-  }
-  bar.style.display = 'grid';
-  const allScores = evaluatedGroups.flatMap(g => g.studentIds.map(sid => stuTotal(ST.evals[g.id]?.students?.[sid]))).filter(v => v !== null);
+  const grid = document.getElementById('stats-grid');
+  if(!grid) return;
+  const evGroups = groups.filter(g => ST.evals[g.id]?.unit);
+  const allScores = evGroups.flatMap(g => g.studentIds.map(sid => stuTotal(ST.evals[g.id]?.students?.[sid]))).filter(v => v !== null);
   const avg = allScores.length ? Math.round((allScores.reduce((a,b) => a + b, 0) / allScores.length) * 10) / 10 : 0;
   const passing = allScores.filter(v => v >= 10).length;
+  const totalStudents = evGroups.reduce((a, g) => a + g.studentIds.length, 0);
   const pct = allScores.length ? Math.round((passing / allScores.length) * 100) : 0;
-  const total = evaluatedGroups.reduce((a, g) => a + g.studentIds.length, 0);
-  
-  bar.innerHTML = `
-    <div class="stat-card"><div class="stat-num" style="color:var(--purple)">${evaluatedGroups.length}/${groups.length}</div><div class="stat-lbl">Groups Done</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--blue)">${avg}/16</div><div class="stat-lbl">Class Average</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:${pct >= 60 ? 'var(--green)' : 'var(--red)'}">${pct}%</div><div class="stat-lbl">Pass Rate</div></div>
-    <div class="stat-card"><div class="stat-num" style="color:var(--green)">${passing}/${total}</div><div class="stat-lbl">Students Passing</div></div>`;
+
+  const stats = [
+    { num: `${evGroups.length}/${groups.length}`, lbl: 'Groups Evaluated', icon: '💎', col: 'var(--purple-l)' },
+    { num: `${avg}/16`, lbl: 'Class Average', icon: '📈', col: 'var(--blue)' },
+    { num: `${pct}%`, lbl: 'Pass Rate', icon: '🎓', col: pct >= 60 ? 'var(--green)' : 'var(--red)' },
+    { num: `${passing}/${totalStudents || 0}`, lbl: 'Total Passing', icon: '✅', col: 'var(--green)' }
+  ];
+
+  grid.innerHTML = stats.map(s => `
+    <div class="stat-card">
+      <div class="stat-icon" style="background:color-mix(in srgb, ${s.col} 15%, transparent); color:${s.col}">${s.icon}</div>
+      <div class="stat-num" style="color:${s.col}">${s.num}</div>
+      <div class="stat-lbl">${s.lbl}</div>
+    </div>
+  `).join('');
 }
 
 /* =====================================================================
