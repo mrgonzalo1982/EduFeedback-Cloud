@@ -11,6 +11,8 @@ const ST_GROQ_MODELS = [
   "llama-3.1-8b-instant"
 ];
 
+
+
 function getApiKey(){
   return localStorage.getItem('ef_groq_key') || '';
 }
@@ -107,36 +109,44 @@ async function generateAIFeedback(sid){
     neutral:   ''
   };
   const moodNote = moodInstructions[mood] || '';
+  
+  // Grammar Checklist Context
+  const gc = sEv.grammarChecked?.[ev.unit] || Array(uq.grammar.length).fill(false);
+  const usedGrammar = uq.grammar.filter((_, i) => gc[i]).join(', ');
+  const missedGrammar = uq.grammar.filter((_, i) => !gc[i]).join(', ');
 
   const exactPhrase = (sEv.exactPhrase || '').trim();
   const grammarErrorType = (sEv.grammarError || '').trim();
 
   // Prompt Construction
-  const sysPrompt = `You are a B1 EFL oral assessment teacher. Transform input data into ONE paragraph of feedback (max 65 words, max clarity, plain text).
+  const sysPrompt = `You are a B1 EFL oral assessment teacher. Transform input data into ONE paragraph of feedback (max 70 words, max clarity, plain text).
 STRUCTURE: 
-1. Strength (specific from notes/phrase). 
-2. Correction (exact grammar error or missed question text). 
-3. Micro-tip.
+1. Strength (specific from notes/phrase or grammar goals achieved). 
+2. Correction (exact grammar error, missed question, or missed target grammar). 
+3. Micro-tip for growth mindset.
 4. Pacing advice if needed.
 
 TONE: ${toneRule}
 ${moodNote}
 
-BANNED: "great job", "well done", "keep it up", "overall", "in conclusion", "it's important to", "make sure to", "remember to", "good effort".
+BANNED: "great job", "well done", "keep it up", "overall", "in conclusion", "it's important to", "make sure to", "remember to", "good effort", "I recommend".
 No bullets, no line breaks. Plain text only. Use ${firstName}.`;
 
   const userPrompt = `STUDENT: ${firstName} | Unit ${ev.unit}: ${uq.topic}
 SCORE: ${totalScoreContext}
 PACING: ${pacingContext}
 QUESTIONS: ${questContext}
-MISSED: ${missedQuestions}
+MISSED QUESTIONS: ${missedQuestions}
+TARGET GRAMMAR ACHIEVED: [${usedGrammar || 'None'}]
+TARGET GRAMMAR MISSED: [${missedGrammar || 'None'}]
 GRAMMAR ERROR TYPE: ${grammarErrorType || 'Not specified'}
 LIVE NOTES: ${notes}
 ${exactPhrase ? `EXACT PHRASE SAID: "${exactPhrase}"` : ''}
 
 INSTRUCTIONS:
 ${pacingRule ? `- PACING: ${pacingRule}` : ''}
-${missedQuestions !== 'None' ? `- MISSED QUESTIONS: Name each missed question text.` : ''}
+${missedQuestions !== 'None' ? `- MISSED QUESTIONS: Name them.` : ''}
+${missedGrammar ? `- GRAMMAR: Advise on using ${missedGrammar} more effectively.` : ''}
 ${exactPhrase ? `- CITE: Weave "${exactPhrase}" into the feedback.` : ''}`;
 
   setAIBtn(sid, 'loading');

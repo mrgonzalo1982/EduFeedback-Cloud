@@ -380,7 +380,7 @@ function openGroupEval(gid){
   const ev = ST.evals[gid];
   g.studentIds.forEach(sid => {
     if(!ev.students[sid]) {
-      ev.students[sid] = { scores:{}, bandSel:{}, extras:{}, custom:'', strength:'', nextGoal:'', liveNotes:'', questChecked:{}, suggestedExtras:{}, synthesizedNote:'', exactPhrase:'', grammarError:'', mood:'neutral' };
+      ev.students[sid] = { scores:{}, bandSel:{}, extras:{}, custom:'', strength:'', nextGoal:'', liveNotes:'', questChecked:{}, grammarChecked:{}, suggestedExtras:{}, synthesizedNote:'', exactPhrase:'', grammarError:'', mood:'neutral' };
     }
   });
   showScreen('evaluation');
@@ -412,6 +412,8 @@ function selectUnit(u){
   ST.curGroup.studentIds.forEach(sid => {
     const qw = document.getElementById(`qwrap-${sid}`);
     if(qw) qw.innerHTML = buildQuestionsHTML(sid);
+    const gr = document.getElementById(`gwrap-${sid}`);
+    if(gr) gr.innerHTML = buildGrammarHTML(sid);
   });
   markUnsaved();
 }
@@ -473,6 +475,7 @@ function buildScolHTML(sid, idx){
     </div>
     <div class="timer-wrap" id="timer-wrap-${sid}">${buildTimerHTML(sid)}</div>
     <div id="qwrap-${sid}" class="qwrap">${buildQuestionsHTML(sid)}</div>
+    <div id="gwrap-${sid}" class="qwrap" style="background:rgba(139,92,246,.03); border-bottom:1px solid var(--border)">${buildGrammarHTML(sid)}</div>
     <div class="notes-wrap">
       <div class="notes-hdr">📝 Live Notes <span class="notes-hdr-sub">— impressions</span></div>
       <textarea class="notes-ta" id="notes-${sid}" placeholder="e.g: used 'used to' correctly · searched for vocab…" oninput="handleNotesInput('${sid}',this.value)">${sEv.liveNotes || ''}</textarea>
@@ -641,6 +644,32 @@ function selectFU(sid, i){
   sEv.questChecked[ev.unit].followUp = (sEv.questChecked[ev.unit].followUp === i) ? null : i;
   const qw = document.getElementById(`qwrap-${sid}`);
   if(qw) qw.innerHTML = buildQuestionsHTML(sid);
+  markUnsaved();
+}
+
+/* =====================================================================
+   GRAMMAR CHECKLIST
+===================================================================== */
+function buildGrammarHTML(sid){
+  const ev = getEv();
+  if(!ev.unit) return `<div style="font-size:11.5px;color:var(--text3);padding:8px 0">Select Unit first.</div>`;
+  const uq = UQ[ev.unit];
+  const sEv = getStuEv(sid);
+  if(!sEv.grammarChecked) sEv.grammarChecked = {};
+  const gc = sEv.grammarChecked[ev.unit] || Array(uq.grammar.length).fill(false);
+  
+  const gHtml = uq.grammar.map((g, i) => `<div class="q-item g-item${gc[i] ? ' chk' : ''}" onclick="toggleGrammar('${sid}',${i})"><span class="q-check">${gc[i] ? '✨' : '○'}</span><span>${g}</span></div>`).join('');
+  
+  return `<div class="q-hdr" style="color:var(--purple)"><span>🎯 Target Grammar</span></div><div class="q-list g-list">${gHtml}</div>`;
+}
+
+function toggleGrammar(sid, i){
+  const ev = getEv(); if(!ev.unit) return;
+  const sEv = getStuEv(sid); if(!sEv.grammarChecked) sEv.grammarChecked = {};
+  if(!sEv.grammarChecked[ev.unit]) sEv.grammarChecked[ev.unit] = Array(UQ[ev.unit].grammar.length).fill(false);
+  sEv.grammarChecked[ev.unit][i] = !sEv.grammarChecked[ev.unit][i];
+  const gr = document.getElementById(`gwrap-${sid}`);
+  if(gr) gr.innerHTML = buildGrammarHTML(sid);
   markUnsaved();
 }
 

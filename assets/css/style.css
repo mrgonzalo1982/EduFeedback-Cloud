@@ -190,6 +190,9 @@ button:disabled{opacity:.4;cursor:not-allowed;}
 .q-item.chk .q-check{color:var(--green);}
 .q-item.chk-fu .q-check{color:var(--blue);}
 .q-fu-lbl{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;}
+.g-item.chk{background:rgba(139,92,246,.12);border-color:rgba(139,92,246,.3);color:var(--text);}
+.g-item.chk .q-check{color:var(--purple)!important;}
+.g-list{margin-bottom:10px;}
 
 /* === LIVE NOTES === */
 .notes-wrap{padding:11px 13px;border-bottom:1px solid var(--border);}

@@ -166,7 +166,7 @@ const BAND_INFO = [
 const UQ = {
   7:{
     topic:'How our entertainment preferences have changed',
-    grammar:['used to','Comparisons (not as…as / more…than)'],
+    grammar:['used to','Comparisons (not as…as / more…than)','Softening Language'],
     vocab:'Music, TV shows, movies',
     main:[
       'What kind of entertainment do you enjoy now?',
@@ -182,7 +182,7 @@ const UQ = {
   },
   8:{
     topic:"What I've been doing lately and my progress",
-    grammar:['Present perfect continuous','Time expressions (recently, lately, for, since)'],
+    grammar:['Present perfect continuous','Present perfect vs. simple','since / for / lately / recently'],
     vocab:'Experiences and progress',
     main:[
       'What have you been working on or doing recently?',
