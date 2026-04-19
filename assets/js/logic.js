@@ -903,6 +903,13 @@ function selectScore(sid, crit, pts){
   updateScoreDisplay(sid);
   const block = document.getElementById(`crit-${sid}-${crit}`);
   if(block) block.querySelectorAll('.band-btn').forEach(b => b.classList.toggle('sel', parseInt(b.dataset.pts) === pts));
+  
+  const labelSpan = document.getElementById(`cs-${sid}-${crit}`);
+  if(labelSpan) {
+    const isAuto = (ST.level === '7' && crit === 'checklist');
+    labelSpan.innerHTML = pts !== null ? `${pts}${isAuto ? ' <span style="font-size:9px;font-weight:400;color:var(--text3)">(Auto)</span>' : ''}` : '—';
+    labelSpan.classList.toggle('sc', pts !== null);
+  }
   renderStudentTabs();
   markUnsaved();
 }

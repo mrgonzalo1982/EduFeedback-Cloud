@@ -43,7 +43,16 @@ function openAIModal(){
 async function generateAIFeedback(sid){
   const ev = getEv();
   const config = getRubric();
-  if(!ev.unit) { showToast(`📚 Please select ${config.assessmentLabel} above first`, 'var(--amber)'); return; }
+  if(!ev.unit) { 
+    showToast(`📚 Please select ${config.assessmentLabel} 1 or 2 at the top first`, 'var(--amber)'); 
+    // Flash the unit selector area for visibility
+    const wrap = document.querySelector('.unit-sel');
+    if(wrap) {
+      wrap.style.boxShadow = '0 0 0 4px var(--amber-br)';
+      setTimeout(() => wrap.style.boxShadow = 'none', 1000);
+    }
+    return; 
+  }
 
   const key = getApiKey();
   if(!key){ openAIModal(); return; }

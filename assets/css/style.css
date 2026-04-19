@@ -260,6 +260,7 @@ button:disabled{opacity:.4;cursor:not-allowed;}
 /* suggested score indicator */
 .band-btn.suggested::before{content:'';position:absolute;top:4px;right:4px;width:5px;height:5px;border-radius:50%;background:var(--amber);opacity:.7;}
 .band-btn{position:relative;}
+.band-btn[data-pts="5"].sel{background:var(--green-b);color:var(--green);}
 .band-btn[data-pts="4"].sel{background:var(--green-b);color:var(--green);}
 .band-btn[data-pts="3"].sel{background:var(--blue-b);color:var(--blue);}
 .band-btn[data-pts="2"].sel{background:var(--amber-b);color:var(--amber);}
