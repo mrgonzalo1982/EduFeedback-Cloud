@@ -57,11 +57,17 @@ async function generateAIFeedback(sid){
   const s = getStu(sid); const firstName = s.fn.split(' ')[0];
   const uq = UQ[ev.unit];
 
-  // Gather selected extras
+  // Gather selected extras & Detailed scores
   const selectedExtras = CRITERIA.map(c => {
     const exIndices = sEv.extras[c] || [];
     return exIndices.map(idx => BANKS[c].extras[idx]).filter(Boolean);
   }).flat().join('; ');
+
+  const criteriaScores = CRITERIA.map(c => {
+    const score = sEv.scores[c];
+    const label = BANKS[c].label;
+    return `${label}: ${score !== undefined ? score + '/4' : 'N/A'}`;
+  }).join(', ');
 
   // Questions Context
   const qc = sEv.questChecked?.[ev.unit] || { main: Array(uq.main.length).fill(false), followUp: null };
@@ -121,19 +127,16 @@ async function generateAIFeedback(sid){
   // Prompt Construction
   const sysPrompt = `You are a B1 EFL oral assessment teacher. Transform input data into ONE paragraph of feedback (max 70 words, max clarity, plain text).
 STRUCTURE: 
-1. Strength (specific from notes/phrase or grammar goals achieved). 
-2. Correction (exact grammar error, missed question, or missed target grammar). 
-3. Micro-tip for growth mindset.
-4. Pacing advice if needed.
+1. Strength (specific from notes or rubric strengths). 
+2. Practical Correction (grammar error, missed question, or area with low score). 
+3. Practical Study Strategy (Actionable: record yourself, use flashcards, watch clips. NO technical phonetics/linguistics).
+Use ${firstName}. Speak like a supportive coach. No bullets.
 
-TONE: ${toneRule}
-${moodNote}
-
-BANNED: "great job", "well done", "keep it up", "overall", "in conclusion", "it's important to", "make sure to", "remember to", "good effort", "I recommend".
-No bullets, no line breaks. Plain text only. Use ${firstName}.`;
+BANNED JARGON: "phonetic", "alveolar", "dental fricative", "lexical", "subordinate clause", "syntax", "aspiration", "prosody".
+BANNED: "great job", "well done", "keep it up", "overall", "in conclusion", "it's important to", "make sure to", "remember to", "good effort", "I recommend".`;
 
   const userPrompt = `STUDENT: ${firstName} | Unit ${ev.unit}: ${uq.topic}
-SCORE: ${totalScoreContext}
+RUBRIC SCORES: ${criteriaScores}
 PACING: ${pacingContext}
 QUESTIONS: ${questContext}
 MISSED QUESTIONS: ${missedQuestions}
