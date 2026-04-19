@@ -317,11 +317,11 @@ function updateSelBar(){
     else if(n < min) cnt.textContent = `${n} selected — add ${min - n} more`;
     else cnt.textContent = `${n} student${n > 1 ? 's' : ''} selected`;
   }
-  if(btn) btn.disabled = n < min;
+  if(btn) btn.disabled = n < 1;
 }
 
 function openCreateModal(){
-  if(ST.selected.length < getMinGroup()) return;
+  if(ST.selected.length < 1) return;
   const chk = document.getElementById('chk-exceptional');
   if(chk) chk.checked = false;
   
@@ -345,6 +345,10 @@ function openCreateModal(){
   
   openModal('modal-group');
   updateSelBar();
+  
+  // Refresh confirm button state immediately
+  const confirmBtn = document.getElementById('btn-confirm-grp');
+  if(confirmBtn) confirmBtn.disabled = ST.selected.length < getMinGroup() || ST.selected.length > getMaxGroup();
 }
 
 function confirmCreateGroup(){
