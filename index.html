@@ -54,8 +54,11 @@
     <nav id="breadcrumb" class="breadcrumb"></nav>
     <div class="hdr-btns">
       <span id="ai-status-badge" class="ai-badge ai-off" onclick="openAIModal()" title="Configure AI Feedback">🤖 AI: OFF</span>
-      <button class="btn btn-ghost btn-sm" onclick="exportData()">⬇ <span>Export</span></button>
-      <button class="btn btn-ghost btn-sm" onclick="triggerImport()">⬆ <span>Import</span></button>
+      <div id="cloud-sync-wrap">
+        <button id="btn-cloud-login" class="btn btn-ghost btn-sm" style="border-radius:20px" onclick="handleLogin()" title="Sync with Google Cloud">☁️ <span class="btn-lbl">Sync</span></button>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="exportData()">⬇ <span class="btn-lbl">Export</span></button>
+      <button class="btn btn-ghost btn-sm" onclick="triggerImport()">⬆ <span class="btn-lbl">Import</span></button>
       <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)"/>
     </div>
   </header>
@@ -264,14 +267,17 @@
   // Make them available globally for the logic.js to call
   window.handleLogin = async () => {
     try {
+      showToast("Conectando con Google...", "var(--purple)");
       await loginWithGoogle();
     } catch (e) {
-      alert("Login failed. Check console.");
+      alert("Error al iniciar sesión. Revisa la consola.");
     }
   };
 
   window.handleLogout = async () => {
-    await logout();
+    if (confirm("¿Desconectar de la nube? Los datos locales se mantendrán.")) {
+      await logout();
+    }
   };
 
   window.saveFirebaseConfig = () => {
@@ -296,11 +302,25 @@
 
   window.onUserLogin = (user) => {
     console.log("Logged in as:", user.email);
+    const wrap = document.getElementById('cloud-sync-wrap');
+    if (wrap) {
+      wrap.innerHTML = `
+        <button class="btn btn-sm" style="background:var(--green-b); border:1px solid var(--green-br); color:var(--green); border-radius:20px" onclick="handleLogout()" title="Conectado como ${user.displayName}">
+          ✅ <span class="btn-lbl">${user.displayName.split(' ')[0]}</span>
+        </button>
+      `;
+    }
     showScreen('dashboard');
     renderDash();
   };
 
   window.onUserLogout = () => {
+    const wrap = document.getElementById('cloud-sync-wrap');
+    if (wrap) {
+      wrap.innerHTML = `
+        <button id="btn-cloud-login" class="btn btn-ghost btn-sm" style="border-radius:20px" onclick="handleLogin()" title="Sincronizar con la nube">☁️ <span class="btn-lbl">Sync</span></button>
+      `;
+    }
     showScreen('login');
   };
 
