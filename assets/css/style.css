@@ -226,7 +226,8 @@ button:disabled{opacity:.4;cursor:not-allowed;}
 .criteria-wrap{padding:10px 11px;display:flex;flex-direction:column;gap:8px;}
 .crit-block{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
 .crit-hdr{padding:8px 11px;display:flex;align-items:center;justify-content:space-between;}
-.crit-label{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;}
+.crit-label{font-size:9.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;}
+.label-mini{font-size:9.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:6px;opacity:0.8;}
 .crit-pts{font-size:19px;font-weight:900;color:var(--text3);}
 .crit-pts.sc{color:var(--text);}
 .band-btns{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--border);}

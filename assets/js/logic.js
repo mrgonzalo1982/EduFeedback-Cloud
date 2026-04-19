@@ -188,7 +188,7 @@ function renderGroupCard(g){
         <span class="gc-name" style="font-size:15px; letter-spacing:-0.2px">${g.name}</span>
         <span class="badge ${done ? 'bdg-done' : 'bdg-pend'}">${done ? '✓ Done' : 'Pending'}</span>
       </div>
-      ${done ? `<div style="font-size:11px;color:var(--text3);margin-bottom:12px;display:flex;align-items:center;gap:4px"><span>🗓 Unit ${ev.unit}</span> · <span>${ev.date || ''}</span></div>` : ''}
+      ${done ? `<div class="crit-label" style="font-size:9.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;display:flex;align-items:center;gap:4px"><span>🗓 Unit ${ev.unit}</span> · <span>${ev.date || ''}</span></div>` : ''}
       <div class="gc-students" style="gap:8px">${stuCards}</div>
       <div class="gc-foot" onclick="event.stopPropagation()" style="border-top:1px solid var(--glass-border); margin-top:16px; padding-top:14px">
         <div style="display:flex;gap:6px">
@@ -484,20 +484,20 @@ function buildScolHTML(sid, idx){
       <div class="notes-hdr">📝 Live Notes <span class="notes-hdr-sub">— impressions</span></div>
       <textarea class="notes-ta" id="notes-${sid}" placeholder="e.g: used 'used to' correctly · searched for vocab…" oninput="handleNotesInput('${sid}',this.value)">${sEv.liveNotes || ''}</textarea>
       <div class="notes-chips" id="chips-${sid}"></div>
-      <div class="synth-note" id="synth-${sid}"><div class="synth-lbl">✨ Auto-note</div><div class="synth-text"></div></div>
-      <div style="display:flex;align-items:center;gap:6px;margin-top:9px">
-        <span style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase">Mood</span>
+      <div class="synth-note" id="synth-${sid}"><div class="synth-lbl">✨ Auto-Feedback Hint</div><div class="synth-text"></div></div>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:12px">
+        <span class="label-mini">Mood Tracking</span>
         <button class="mood-btn${sEv.mood === 'nervous' ? ' mood-sel' : ''}" onclick="setMood('${sid}','nervous')" title="Nervous">😰</button>
         <button class="mood-btn${!sEv.mood || sEv.mood === 'neutral' ? ' mood-sel' : ''}" onclick="setMood('${sid}','neutral')" title="Neutral">😐</button>
         <button class="mood-btn${sEv.mood === 'confident' ? ' mood-sel' : ''}" onclick="setMood('${sid}','confident')" title="Confident">😊</button>
         <button class="mood-btn${sEv.mood === 'blocked' ? ' mood-sel' : ''}" onclick="setMood('${sid}','blocked')" title="Blocked / Froze">🤯</button>
       </div>
-      <div style="margin-top:8px">
-        <label style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;display:block;margin-bottom:4px">💬 Exact phrase</label>
+      <div style="margin-top:10px">
+        <label class="label-mini">💬 Exact phrase captured</label>
         <input type="text" class="inp" id="phrase-${sid}" placeholder="What they said..." value="${sEv.exactPhrase || ''}" oninput="getStuEv('${sid}').exactPhrase=this.value;markUnsaved()"/>
       </div>
-      <div style="margin-top:8px">
-        <label style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;display:block;margin-bottom:4px">⚠ Grammar error</label>
+      <div style="margin-top:10px">
+        <label class="label-mini">⚠ Target Grammar Error</label>
         <select class="select-inp" style="width:100%" id="gramerr-${sid}" onchange="getStuEv('${sid}').grammarError=this.value;markUnsaved()">
           <option value="">— None —</option>
           <option value="Tense Confusion (past vs perfect)"${sEv.grammarError.includes('Tense Confusion') ? ' selected' : ''}>Tense Confusion</option>
@@ -631,7 +631,7 @@ function buildQuestionsHTML(sid){
   const mainHtml = uq.main.map((q, i) => `<div class="q-item${main[i] ? ' chk' : ''}" onclick="toggleQ('${sid}',${i})"><span class="q-check">${main[i] ? '✓' : '○'}</span><span>${q}</span></div>`).join('');
   const fuHtml = uq.followUp.map((q, i) => `<div class="q-item${fu === i ? ' chk-fu' : ''}" onclick="selectFU('${sid}',${i})"><span class="q-check">${fu === i ? '●' : '○'}</span><span>${q}</span></div>`).join('');
   
-  return `<div class="q-hdr"><span>📋 Task Questions</span><span style="font-size:10px;color:${checked === uq.main.length ? 'var(--green)' : 'var(--text3)'}">${checked}/${uq.main.length}</span></div><div class="q-list">${mainHtml}</div><div class="q-fu-lbl">Follow-up:</div><div class="q-list">${fuHtml}</div>`;
+  return `<div class="q-hdr"><span>📋 Task Questions</span><span style="font-size:10px;color:${checked === uq.main.length ? 'var(--green)' : 'var(--text3)'}">${checked}/${uq.main.length}</span></div><div class="q-list">${mainHtml}</div><div class="q-fu-lbl" style="font-size:11px; margin-top:12px; margin-bottom:6px">📋 Follow-up Question:</div><div class="q-list">${fuHtml}</div>`;
 }
 
 function toggleQ(sid, i){

@@ -127,8 +127,8 @@ async function generateAIFeedback(sid){
   // Prompt Construction
   const sysPrompt = `You are a B1 EFL oral assessment teacher. Transform input data into ONE paragraph of feedback (max 70 words, max clarity, plain text).
 STRUCTURE: 
-1. Strength (specific from notes or rubric strengths). 
-2. Practical Correction (grammar error, missed question, or area with low score). 
+1. Strength (PRIORITIZE Rubric Observations and Exact Phrase). 
+2. Practical Correction (Specific grammar error or area with low score). 
 3. Practical Study Strategy (Actionable: record yourself, use flashcards, watch clips. NO technical phonetics/linguistics).
 Use ${firstName}. Speak like a supportive coach. No bullets.
 
@@ -137,11 +137,15 @@ BANNED: "great job", "well done", "keep it up", "overall", "in conclusion", "it'
 
   const userPrompt = `STUDENT: ${firstName} | Unit ${ev.unit}: ${uq.topic}
 RUBRIC SCORES: ${criteriaScores}
+RUBRIC OBSERVATIONS: ${selectedExtras || 'None selected'}
 PACING: ${pacingContext}
+MOOD: ${mood}
 QUESTIONS: ${questContext}
 MISSED QUESTIONS: ${missedQuestions}
 TARGET GRAMMAR ACHIEVED: [${usedGrammar || 'None'}]
 TARGET GRAMMAR MISSED: [${missedGrammar || 'None'}]
+${sEv.strength ? `TEACHER INITIAL STRENGTH: "${sEv.strength}"` : ''}
+${sEv.nextGoal ? `TEACHER INITIAL GOAL: "${sEv.nextGoal}"` : ''}
 GRAMMAR ERROR TYPE: ${grammarErrorType || 'Not specified'}
 LIVE NOTES: ${notes}
 ${exactPhrase ? `EXACT PHRASE SAID: "${exactPhrase}"` : ''}
