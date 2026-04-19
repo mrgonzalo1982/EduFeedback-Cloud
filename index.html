@@ -31,6 +31,7 @@
     }
     .login-logo { font-size: 32px; font-weight: 800; margin-bottom: 30px; }
   </style>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 </head>
 <body>
 <div id="app">
@@ -125,6 +126,7 @@
         <button class="unit-btn" id="ubtn8" onclick="selectUnit(8)">Unit 8</button>
       </div>
       <div class="eval-hdr-right">
+        <button id="btn-email-group" class="btn btn-ghost btn-sm" onclick="handleEmailGroup()" style="border-radius:20px">📧 Email Group</button>
         <button class="btn btn-ghost btn-sm" onclick="saveEval()">💾 Save</button>
         <button class="btn btn-primary btn-sm" onclick="printAll()">🖨 Print All</button>
       </div>
@@ -210,6 +212,7 @@
   <!-- MODAL: Firebase Setup -->
   <div class="modal-overlay" id="modal-firebase">
     <div class="modal-box" style="max-width:550px">
+
       <div class="modal-title">Cloud Setup (Firebase)</div>
       <p style="font-size:13px;color:var(--text2);margin-bottom:14px">To enable multi-device sync, paste your Firebase Web App configuration from the Firebase Console.</p>
       
@@ -223,12 +226,28 @@
         </ol>
       </div>
 
-      <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">Paste Config JSON</label>
-      <textarea id="fb-config-inp" class="inp" style="height:150px; font-family:monospace; font-size:11px" placeholder='{ "apiKey": "...", "authDomain": "...", ... }'></textarea>
+      <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px">Paste Config JSON (Firebase)</label>
+      <textarea id="fb-config-inp" class="inp" style="height:80px; font-family:monospace; font-size:11px; margin-bottom:14px" placeholder='{ "apiKey": "...", "authDomain": "...", ... }'></textarea>
+
+      <div style="border-top:1px solid var(--border); padding-top:14px">
+        <label style="font-size:14px; font-weight:800; color:var(--text); display:block; margin-bottom:8px">📧 EmailJS Configuration</label>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px">
+          <div>
+            <label style="font-size:11px; color:var(--text3)">Service ID</label>
+            <input type="text" id="emailjs-service-id" class="inp" placeholder="service_xxx"/>
+          </div>
+          <div>
+            <label style="font-size:11px; color:var(--text3)">Template ID</label>
+            <input type="text" id="emailjs-template-id" class="inp" placeholder="template_xxx"/>
+          </div>
+        </div>
+        <label style="font-size:11px; color:var(--text3)">Public Key</label>
+        <input type="text" id="emailjs-public-key" class="inp" placeholder="user_xxx"/>
+      </div>
       
       <div class="modal-foot">
         <button class="btn btn-ghost" onclick="closeModal('modal-firebase')">Cancel</button>
-        <button class="btn btn-primary" onclick="window.saveFirebaseConfig()">Save & Connect</button>
+        <button class="btn btn-primary" onclick="saveAllConfigs()">Save & Connect</button>
       </div>
     </div>
   </div>
@@ -260,6 +279,7 @@
 <script src="assets/js/data.js"></script>
 <script src="assets/js/logic.js"></script>
 <script src="assets/js/ai.js"></script>
+<script src="assets/js/email.js"></script>
 
 <script type="module">
   import { initFirebase, loginWithGoogle, logout, currentUser, saveToCloud, saveGroqKeyToCloud } from './assets/js/db.js';
@@ -278,6 +298,27 @@
     if (confirm("¿Desconectar de la nube? Los datos locales se mantendrán.")) {
       await logout();
     }
+  };
+
+  window.saveAllConfigs = () => {
+    // 1. Firebase
+    const raw = document.getElementById('fb-config-inp').value.trim();
+    if(raw) window.saveFirebaseConfig();
+
+    // 2. EmailJS
+    const sId = document.getElementById('emailjs-service-id').value.trim();
+    const tId = document.getElementById('emailjs-template-id').value.trim();
+    const pKey = document.getElementById('emailjs-public-key').value.trim();
+    
+    if(sId) localStorage.setItem('ef_emailjs_service_id', sId);
+    if(tId) localStorage.setItem('ef_emailjs_template_id', tId);
+    if(pKey) {
+        localStorage.setItem('ef_emailjs_public_key', pKey);
+        emailjs.init(pKey);
+    }
+    
+    showToast("Configurations saved!", "var(--green)");
+    closeModal('modal-firebase');
   };
 
   window.saveFirebaseConfig = () => {
@@ -420,6 +461,21 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     init();
+    // Initialize EmailJS with Public Key if available
+    const emailKey = localStorage.getItem('ef_emailjs_public_key');
+    if (emailKey) emailjs.init(emailKey);
+    
+    // Fill modal fields if they exist
+    const oldOpen = window.openModal;
+    window.openModal = (id) => {
+        if(id === 'modal-firebase') {
+            document.getElementById('emailjs-service-id').value = localStorage.getItem('ef_emailjs_service_id') || '';
+            document.getElementById('emailjs-template-id').value = localStorage.getItem('ef_emailjs_template_id') || '';
+            document.getElementById('emailjs-public-key').value = localStorage.getItem('ef_emailjs_public_key') || '';
+        }
+        oldOpen(id);
+    };
+    
     // If not logged in after init, show login
     if (!currentUser && !storedConfig) showScreen('login');
   });
