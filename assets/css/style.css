@@ -260,12 +260,9 @@ button:disabled{opacity:.4;cursor:not-allowed;}
 /* suggested score indicator */
 .band-btn.suggested::before{content:'';position:absolute;top:4px;right:4px;width:5px;height:5px;border-radius:50%;background:var(--amber);opacity:.7;}
 .band-btn{position:relative;}
-.band-btn[data-pts="5"].sel{background:var(--green-b);color:var(--green);}
-.band-btn[data-pts="4"].sel{background:var(--green-b);color:var(--green);}
-.band-btn[data-pts="3"].sel{background:var(--blue-b);color:var(--blue);}
-.band-btn[data-pts="2"].sel{background:var(--amber-b);color:var(--amber);}
-.band-btn[data-pts="1"].sel{background:var(--orange-b);color:var(--orange);}
-.band-btn[data-pts="0"].sel{background:var(--red-b);color:var(--red);}
+.band-btn.sel{border:1px solid var(--purple-l)!important;box-shadow:inset 0 0 0 1px var(--purple-l);font-weight:900;}
+.band-btn[data-pts="5"].sel{background:var(--green-b);color:var(--green);border-color:var(--green-br)!important;}
+.band-btn[data-pts="4"].sel{background:var(--green-b);color:var(--green);border-color:var(--green-br)!important;}
 
 /* === COMMENTS PANEL === */
 .comments-outer{padding:0 11px 10px;}
