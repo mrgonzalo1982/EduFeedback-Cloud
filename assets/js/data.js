@@ -57,22 +57,24 @@ const DEFAULT_STUDENTS = {
       {"id": "s7_1_2", "fn": "Josefina Antonia", "ln": "Bascunan Lillo", "email": "josefbascunan@alumnos.uai.cl"},
       {"id": "s7_1_3", "fn": "Dominga Antonella", "ln": "Bellagamba Gallardo", "email": "dbellagamba@alumnos.uai.cl"},
       {"id": "s7_1_4", "fn": "Benjamin Antonio", "ln": "Burgos Leon", "email": "benburgos@alumnos.uai.cl"},
-      {"id": "s7_1_5", "fn": "Benjamin Nicolas", "ln": "Concha Cibiie", "email": "benconcha@alumnos.uai.cl"},
-      {"id": "s7_1_6", "fn": "Javiera", "ln": "Escandon Rojas", "email": "javescandon@alumnos.uai.cl"},
-      {"id": "s7_1_7", "fn": "Catalina Antonia", "ln": "Espinoza Rojas", "email": "catalinespinoza@alumnos.uai.cl"},
-      {"id": "s7_1_8", "fn": "Martin Alonso", "ln": "Faundez Olivares", "email": "martfaundez@alumnos.uai.cl"},
-      {"id": "s7_1_9", "fn": "Francisca Jesus", "ln": "Garcia Perez", "email": "francesgarcia@alumnos.uai.cl"},
-      {"id": "s7_1_10", "fn": "Domingo Sebastian", "ln": "Ilabel Sunkel", "email": "doilabel@alumnos.uai.cl"},
-      {"id": "s7_1_11", "fn": "Tomas Benjamin", "ln": "Munoz Munoz", "email": "tomamunoz@alumnos.uai.cl"},
-      {"id": "s7_1_12", "fn": "Trinidad Antonia", "ln": "Nunez Oyarce", "email": "trinunuez@alumnos.uai.cl"},
-      {"id": "s7_1_13", "fn": "Consuelo Esperanza", "ln": "Ojeda Gallegos", "email": "conojeda@alumnos.uai.cl"},
-      {"id": "s7_1_14", "fn": "Valentina Paz", "ln": "Ponce Caneo", "email": "valponce@alumnos.uai.cl"},
-      {"id": "s7_1_15", "fn": "Antonia Belen", "ln": "Riveros Rojas", "email": "antriveros@alumnos.uai.cl"},
-      {"id": "s7_1_16", "fn": "Vicente Santiago", "ln": "Seura Castillo", "email": "vseura@alumnos.uai.cl"},
-      {"id": "s7_1_17", "fn": "Catalina Jesus", "ln": "Silva Martinez", "email": "catsilva@alumnos.uai.cl"},
-      {"id": "s7_1_18", "fn": "Maria Trinidad", "ln": "Toro Marfull", "email": "matoro@alumnos.uai.cl"},
-      {"id": "s7_1_19", "fn": "Benjamin Nicolas", "ln": "Varas Cerda", "email": "bevaras@alumnos.uai.cl"},
-      {"id": "s7_1_20", "fn": "Martina Ignacia", "ln": "Vidal Morales", "email": "martvidal@alumnos.uai.cl"}
+      {"id": "s7_1_5", "fn": "Vicente Alonso", "ln": "Concha P\u00e9rez", "email": "vicconcha@alumnos.uai.cl"},
+      {"id": "s7_1_6", "fn": "Grexcy Anais", "ln": "Espinoza Saavedra", "email": "grespinoza@alumnos.uai.cl"},
+      {"id": "s7_1_7", "fn": "Katty Alejandra", "ln": "Frost Aranda", "email": "kfrost@alumnos.uai.cl"},
+      {"id": "s7_1_8", "fn": "Mat\u00edas Rodrigo", "ln": "Jaccard Del Canto", "email": "mjaccard@alumnos.uai.cl"},
+      {"id": "s7_1_9", "fn": "Farida Misrrain", "ln": "Libano Salas", "email": "flibano@alumnos.uai.cl"},
+      {"id": "s7_1_10", "fn": "Joaqu\u00edn Andres", "ln": "Maturana Saffie", "email": "joamaturana@alumnos.uai.cl"},
+      {"id": "s7_1_11", "fn": "Simon Emilio", "ln": "Molina Lara", "email": "simolina@alumnos.uai.cl"},
+      {"id": "s7_1_12", "fn": "Joaquin Isaias", "ln": "Ocaranza Conde", "email": "jocaranza@alumnos.uai.cl"},
+      {"id": "s7_1_13", "fn": "Laura Andrea", "ln": "Osses Hern\u00e1ndez", "email": "laosses@alumnos.uai.cl"},
+      {"id": "s7_1_14", "fn": "Ignacia Belen", "ln": "Paredes Berenguer", "email": "ignparedes@alumnos.uai.cl"},
+      {"id": "s7_1_15", "fn": "Agustin Mauricio", "ln": "Pulgar Ayala", "email": "agpulgar@alumnos.uai.cl"},
+      {"id": "s7_1_16", "fn": "Valeria Monserrat", "ln": "Retamales Acuna", "email": "vretamales@alumnos.uai.cl"},
+      {"id": "s7_1_17", "fn": "Daniella Caterina", "ln": "Roncagliolo Ugarte", "email": "droncagliolo@alumnos.uai.cl"},
+      {"id": "s7_1_18", "fn": "Joaquin Carlos Enrique", "ln": "Rossi Araya", "email": "jorossi@alumnos.uai.cl"},
+      {"id": "s7_1_19", "fn": "Francisca Amelia", "ln": "Sanchez Arizaga", "email": "francisanchez@alumnos.uai.cl"},
+      {"id": "s7_1_20", "fn": "Jos\u00e9 Ignacio", "ln": "Silva Carrillo", "email": "joseigsilva@alumnos.uai.cl"},
+      {"id": "s7_1_21", "fn": "Marcelo Alberto", "ln": "V\u00e1squez Campos", "email": "marcelovasquez@alumnos.uai.cl"},
+      {"id": "s7_1_22", "fn": "Agust\u00edn Arturo", "ln": "Zambrano Mart\u00ednez", "email": "agzambrano@alumnos.uai.cl"}
     ],
     '2': [
       {"id": "s7_2_1", "fn": "Vicente Ignacio", "ln": "Aravena Espinoza", "email": "vicaravena@alumnos.uai.cl"},
@@ -94,7 +96,9 @@ const DEFAULT_STUDENTS = {
       {"id": "s7_2_17", "fn": "Joaqu\u00edn Alonso", "ln": "Santana Gonz\u00e1lez", "email": "joasantana@alumnos.uai.cl"},
       {"id": "s7_2_18", "fn": "Sof\u00eda Antonia", "ln": "Serra Vel\u00e1squez", "email": "sserra@alumnos.uai.cl"},
       {"id": "s7_2_19", "fn": "Felipe Beltr\u00e1n", "ln": "Sotta Couso", "email": "fesotta@alumnos.uai.cl"},
-      {"id": "s7_2_20", "fn": "Josefa Ivonne", "ln": "Tapia Jorquera", "email": "josefatapia@alumnos.uai.cl"}
+      {"id": "s7_2_20", "fn": "Josefa Ivonne", "ln": "Tapia Jorquera", "email": "josefatapia@alumnos.uai.cl"},
+      {"id": "s7_2_21", "fn": "Ignacio Eduardo", "ln": "Villarroel Carrasco", "email": "igvillarroel@alumnos.uai.cl"},
+      {"id": "s7_2_22", "fn": "Martina Belen", "ln": "Vitar Saavedra", "email": "martinavitar@alumnos.uai.cl"}
     ],
     '3': [
       {"id": "s7_3_1", "fn": "Joaqu\u00edn Alejandro", "ln": "Araya Medina", "email": "joaqaraya@alumnos.uai.cl"},
@@ -116,7 +120,9 @@ const DEFAULT_STUDENTS = {
       {"id": "s7_3_17", "fn": "Vicente Antonio", "ln": "Rodriguez Casazza", "email": "vicenteanrodriguez@alumnos.uai.cl"},
       {"id": "s7_3_18", "fn": "Maximiliano Andres", "ln": "Torres Guajardo", "email": "maximtorres@alumnos.uai.cl"},
       {"id": "s7_3_19", "fn": "Felipe Ignacio", "ln": "Torrijo Bustos", "email": "ftorrijo@alumnos.uai.cl"},
-      {"id": "s7_3_20", "fn": "Monserrat Polette", "ln": "Vera Nunez", "email": "monsvera@alumnos.uai.cl"}
+      {"id": "s7_3_20", "fn": "Monserrat Polette", "ln": "Vera Nunez", "email": "monsvera@alumnos.uai.cl"},
+      {"id": "s7_3_21", "fn": "Antonia Sof\u00eda", "ln": "Vergara Dazarola", "email": "antonivergara@alumnos.uai.cl"},
+      {"id": "s7_3_22", "fn": "Benjam\u00edn Gabriel", "ln": "Z\u00fa\u00f1iga Guerra", "email": "benzuniga@alumnos.uai.cl"}
     ],
     '4': [
       {"id": "s7_4_1", "fn": "Martin Simon", "ln": "Andrade Minetti", "email": "martiandrade@alumnos.uai.cl"},
@@ -138,7 +144,9 @@ const DEFAULT_STUDENTS = {
       {"id": "s7_4_17", "fn": "Agustin Emiliano", "ln": "Ramirez Frioli", "email": "agustramirez@alumnos.uai.cl"},
       {"id": "s7_4_18", "fn": "Emilia Ivonne", "ln": "Saez Ahumada", "email": "emsaez@alumnos.uai.cl"},
       {"id": "s7_4_19", "fn": "Valentina Ignacia", "ln": "Vasquez Vasquez", "email": "valentinvasquez@alumnos.uai.cl"},
-      {"id": "s7_4_20", "fn": "Jos\u00e9 Manuel", "ln": "Vicente Gorigoit\u00eda", "email": "jovicente@alumnos.uai.cl"}
+      {"id": "s7_4_20", "fn": "Jos\u00e9 Manuel", "ln": "Vicente Gorigoit\u00eda", "email": "jovicente@alumnos.uai.cl"},
+      {"id": "s7_4_21", "fn": "Victoria Katarina", "ln": "Vilches Gutierrez", "email": "victvilches@alumnos.uai.cl"},
+      {"id": "s7_4_22", "fn": "Francisca Ignacia", "ln": "Villarroel Rosas", "email": "francivillarroel@alumnos.uai.cl"}
     ]
   }
 };
