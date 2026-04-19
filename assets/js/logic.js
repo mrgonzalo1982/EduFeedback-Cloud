@@ -276,8 +276,14 @@ function startSelecting(){
 }
 
 function isExceptional(){ return document.getElementById('chk-exceptional')?.checked || false; }
-function getMaxGroup(){ return isExceptional() ? 4 : 3; }
-function getMinGroup(){ return isExceptional() ? 1 : 2; }
+function getMaxGroup(){ 
+  if(ST.level === '7') return isExceptional() ? 6 : 5;
+  return isExceptional() ? 4 : 3; 
+}
+function getMinGroup(){ 
+  if(ST.level === '7') return isExceptional() ? 1 : 5;
+  return isExceptional() ? 1 : 2; 
+}
 
 function toggleExceptional(){
   updateSelBar();
@@ -326,6 +332,13 @@ function openCreateModal(){
       return `<div class="gc-student" style="padding:7px;background:var(--bg);border-radius:6px"><div class="ava" style="background:${avatarGrad(id)}">${initials(s.fn, s.ln)}</div><span>${s.fn} ${s.ln}</span></div>`;
     }).join('');
   }
+
+  // Update exceptional label text dynamically
+  const lbl = document.getElementById('exceptional-desc');
+  if(lbl) {
+    if(ST.level === '7') lbl.textContent = "Habilitar para crear un grupo de 1-4 o 6 estudiantes (casos especiales).";
+    else lbl.textContent = "Habilitar para crear un grupo de 1 o 4 estudiantes (casos especiales).";
+  }
   
   const nameInp = document.getElementById('grp-name-inp');
   if(nameInp) nameInp.value = `Group ${getGroups().length + 1}`;
@@ -342,7 +355,15 @@ function confirmCreateGroup(){
   
   const nameInp = document.getElementById('grp-name-inp');
   const name = (nameInp ? nameInp.value.trim() : '') || `Group ${getGroups().length + 1}`;
-  const g = { id: uid(), name, section: ST.section, studentIds: [...ST.selected], exceptional: isExceptional() && (n === 1 || n === 4) };
+  
+  let exceptional = isExceptional();
+  if (ST.level === '7') {
+    exceptional = exceptional && (n < 5 || n === 6);
+  } else {
+    exceptional = exceptional && (n === 1 || n === 4);
+  }
+  
+  const g = { id: uid(), name, section: ST.section, studentIds: [...ST.selected], exceptional };
   
   const grps = getGroups();
   grps.push(g);
