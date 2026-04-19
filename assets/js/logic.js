@@ -253,6 +253,8 @@ function renderStats(groups){
     { num: `${passing}/${totalStudents || 0}`, lbl: 'Total Passing', icon: '✅', col: 'var(--green)' }
   ];
 
+  const grid = document.getElementById('stats-grid');
+  if(!grid) return;
   grid.innerHTML = stats.map(s => `
     <div class="stat-card">
       <div class="stat-icon" style="background:color-mix(in srgb, ${s.col} 15%, transparent); color:${s.col}">${s.icon}</div>
