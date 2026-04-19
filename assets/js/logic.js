@@ -10,6 +10,7 @@ const ST = {
   curGroup:null, activeTab:0,
   pendingDelete:null,
   aiProvider: 'groq',
+  groupChecklist: {}, // { gid: { item_id: bool } }
 };
 
 const TIMERS = {}; // { sid: { elapsed, running, iid } }
@@ -70,23 +71,34 @@ function unassignedIds(){
 
 function stuTotal(sEv){
   if(!sEv) return null;
-  const v = CRITERIA.map(c => sEv.scores?.[c]);
+  const config = getRubric();
+  const v = config.criteria.map(c => sEv.scores?.[c]);
   if(v.some(x => x == null || x === undefined)) return null;
   return v.reduce((a,b) => a + b, 0);
 }
 
 function scoreColor(t){
   if(t === null) return 'var(--text3)';
-  if(t >= 14) return '#22c55e';
-  if(t >= 10) return '#3b82f6';
-  if(t >= 6) return '#f59e0b';
+  const config = getRubric();
+  const ratio = t / config.totalPts;
+  if(ratio >= 0.875) return '#22c55e'; // ~14/16 or ~26/30
+  if(ratio >= 0.625) return '#3b82f6'; // ~10/16 or ~18/30
+  if(ratio >= 0.375) return '#f59e0b';
   return '#ef4444';
 }
 
 function getEv(){ return ST.evals[ST.curGroup.id]; }
 function getStuEv(sid){ return getEv().students[sid]; }
-function bandStyle(pts){ 
-  return ({4:['#dcfce7','#166534'], 3:['#dbeafe','#1e40af'], 2:['#fef3c7','#78350f'], 1:['#fff7ed','#9a3412'], 0:['#fef2f2','#991b1b']})[pts] || ['#f9fafb','#374151']; 
+function bandStyle(pts){
+  const config = getRubric();
+  const max = config.bandInfo[0].pts; // e.g. 4 or 5
+  const ratio = pts / max;
+  if(pts === null) return ['#f9fafb', '#374151'];
+  if(ratio >= 0.8) return ['#dcfce7', '#166534']; // Exc
+  if(ratio >= 0.6) return ['#dbeafe', '#1e40af']; // Good
+  if(ratio >= 0.4) return ['#fef3c7', '#78350f']; // Sat
+  if(ratio >= 0.2) return ['#fff7ed', '#9a3412']; // Dev
+  return ['#fef2f2', '#991b1b']; // Beg
 }
 
 /* =====================================================================
@@ -173,12 +185,13 @@ function renderGroupCard(g){
     const s = getStu(sid);
     if(!s) return '';
     const tot = stuTotal(ev?.students?.[sid]);
-    const pass = tot !== null && tot >= 10;
+    const config = getRubric();
+    const pass = tot !== null && tot >= config.passThreshold;
     return `
       <div class="gc-student">
         <div class="ava" style="background:${avatarGrad(sid)}; font-size:9px; border:1px solid rgba(255,255,255,0.1)">${initials(s.fn, s.ln)}</div>
         <span class="gc-student-name">${s.fn} ${s.ln}</span>
-        ${tot !== null ? `<span class="badge ${pass ? 'bdg-pass' : 'bdg-fail'}" style="font-size:9px; padding:1px 6px">${tot}/16</span>` : ''}
+        ${tot !== null ? `<span class="badge ${pass ? 'bdg-pass' : 'bdg-fail'}" style="font-size:9px; padding:1px 6px">${tot}/${config.totalPts}</span>` : ''}
       </div>`;
   }).join('');
   
@@ -225,18 +238,17 @@ function renderUnassigned(ids){
 }
 
 function renderStats(groups){
-  const grid = document.getElementById('stats-grid');
-  if(!grid) return;
+  const config = getRubric();
   const evGroups = groups.filter(g => ST.evals[g.id]?.unit);
   const allScores = evGroups.flatMap(g => g.studentIds.map(sid => stuTotal(ST.evals[g.id]?.students?.[sid]))).filter(v => v !== null);
   const avg = allScores.length ? Math.round((allScores.reduce((a,b) => a + b, 0) / allScores.length) * 10) / 10 : 0;
-  const passing = allScores.filter(v => v >= 10).length;
+  const passing = allScores.filter(v => v >= config.passThreshold).length;
   const totalStudents = evGroups.reduce((a, g) => a + g.studentIds.length, 0);
   const pct = allScores.length ? Math.round((passing / allScores.length) * 100) : 0;
 
   const stats = [
     { num: `${evGroups.length}/${groups.length}`, lbl: 'Groups Evaluated', icon: '💎', col: 'var(--purple-l)' },
-    { num: `${avg}/16`, lbl: 'Class Average', icon: '📈', col: 'var(--blue)' },
+    { num: `${avg}/${config.totalPts}`, lbl: 'Class Average', icon: '📈', col: 'var(--blue)' },
     { num: `${pct}%`, lbl: 'Pass Rate', icon: '🎓', col: pct >= 60 ? 'var(--green)' : 'var(--red)' },
     { num: `${passing}/${totalStudents || 0}`, lbl: 'Total Passing', icon: '✅', col: 'var(--green)' }
   ];
@@ -394,13 +406,30 @@ function openGroupEval(gid){
 function renderEvalScreen(){
   const g = ST.curGroup;
   const ev = getEv();
+  const config = getRubric();
   const nameEl = document.getElementById('eval-group-name');
   const metaEl = document.getElementById('eval-meta');
   if(nameEl) nameEl.textContent = g.name;
   if(metaEl) metaEl.textContent = `Level ${ST.level} · Section ${g.section}`;
-  refreshUnitBtns(ev.unit);
+  
+  // Render Dynamic Assessment/Unit Buttons
+  const unitWrap = document.querySelector('.unit-sel');
+  if(unitWrap){
+    unitWrap.innerHTML = `
+      <label>${config.assessmentLabel}</label>
+      ${config.units.map(u => `<button class="unit-btn${ev.unit === u ? ' active' : ''}" id="ubtn${u}" onclick="selectUnit(${u})">${config.assessmentLabel} ${u}</button>`).join('')}
+    `;
+  }
+  
   renderStudentTabs();
   renderStudentsGrid();
+  
+  // Render Group Checklist if Level 7
+  if(ST.level === '7') renderGroupChecklist();
+  else {
+    const gcWrap = document.getElementById('group-checklist-wrap');
+    if(gcWrap) gcWrap.style.display = 'none';
+  }
 }
 
 function refreshUnitBtns(u){
@@ -412,7 +441,10 @@ function refreshUnitBtns(u){
 
 function selectUnit(u){
   getEv().unit = u;
-  refreshUnitBtns(u);
+  const config = getRubric();
+  document.querySelectorAll('.unit-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('onclick').includes(u));
+  });
   ST.curGroup.studentIds.forEach(sid => {
     const qw = document.getElementById(`qwrap-${sid}`);
     if(qw) qw.innerHTML = buildQuestionsHTML(sid);
@@ -425,13 +457,15 @@ function selectUnit(u){
 function renderStudentTabs(){
   const g = ST.curGroup;
   const ev = getEv();
+  const config = getRubric();
   const inner = document.getElementById('stabs-inner');
   if(!inner) return;
   inner.innerHTML = g.studentIds.map((sid, i) => {
     const s = getStu(sid);
     const tot = stuTotal(ev.students[sid]);
-    const col = tot !== null ? (tot >= 10 ? 'var(--green)' : 'var(--red)') : 'var(--text3)';
-    return `<div class="stab${i === ST.activeTab ? ' active' : ''}" onclick="switchTab(${i})"><div>${s.fn.split(' ')[0]}</div><div class="stab-score" style="color:${col}">${tot !== null ? tot + '/16' : '—'}</div></div>`;
+    const pass = tot !== null && tot >= config.passThreshold;
+    const col = tot !== null ? (pass ? 'var(--green)' : 'var(--red)') : 'var(--text3)';
+    return `<div class="stab${i === ST.activeTab ? ' active' : ''}" onclick="switchTab(${i})"><div>${s.fn.split(' ')[0]}</div><div class="stab-score" style="color:${col}">${tot !== null ? tot + '/' + config.totalPts : '—'}</div></div>`;
   }).join('');
 }
 
@@ -457,11 +491,12 @@ function renderStudentsGrid(){
 function buildScolHTML(sid, idx){
   const s = getStu(sid);
   const sEv = getStuEv(sid);
+  const config = getRubric();
   const tot = stuTotal(sEv);
-  const pass = tot !== null && tot >= 10;
-  const pct = tot !== null ? Math.round((tot / 16) * 100) : 0;
+  const pass = tot !== null && tot >= config.passThreshold;
+  const pct = tot !== null ? Math.round((tot / config.totalPts) * 100) : 0;
   const col = scoreColor(tot);
-  const critHtml = CRITERIA.map(c => buildCritHTML(sid, c)).join('');
+  const critHtml = config.criteria.map(c => buildCritHTML(sid, c)).join('');
   
   return `<div class="scol${idx === ST.activeTab ? ' active' : ''}" id="scol-${sid}">
     <div class="scol-hdr">
@@ -471,11 +506,11 @@ function buildScolHTML(sid, idx){
       </div>
       <div class="scol-score-row">
         <span class="scol-total" id="tot-${sid}" style="color:${tot !== null ? col : 'var(--text3)'}">${tot !== null ? tot : '—'}</span>
-        <span class="scol-of">/16</span>
+        <span class="scol-of">/${config.totalPts}</span>
         <span id="pct-${sid}" style="font-size:12px;font-weight:600;color:${col};margin-left:auto">${tot !== null ? pct + '%' : ''}</span>
         <span id="pbdg-${sid}" class="badge ${tot === null ? '' : 'bdg-' + (pass ? 'pass' : 'fail')}" style="${tot === null ? 'visibility:hidden' : ''}">${pass ? '✓ PASS' : '✕ FAIL'}</span>
       </div>
-      <div class="score-bar-wrap"><div class="score-bar-fill" id="bar-${sid}" style="width:${pct}%;background:${col}"></div><div class="score-bar-thresh" title="Passing threshold 10/16"></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-fill" id="bar-${sid}" style="width:${pct}%;background:${col}"></div><div class="score-bar-thresh" style="left:${(config.passThreshold / config.totalPts)*100}%" title="Passing threshold ${config.passThreshold}/${config.totalPts}"></div></div>
     </div>
     <div class="timer-wrap" id="timer-wrap-${sid}">${buildTimerHTML(sid)}</div>
     <div id="qwrap-${sid}" class="qwrap">${buildQuestionsHTML(sid)}</div>
@@ -522,11 +557,66 @@ function buildScolHTML(sid, idx){
 }
 
 function buildCritHTML(sid, crit){
-  const bank = BANKS[crit];
+  const config = getRubric();
+  const bank = config.banks[crit];
   const sEv = getStuEv(sid);
   const cur = sEv.scores[crit] ?? null;
-  const btns = BAND_INFO.map(b => `<button class="band-btn${cur === b.pts ? ' sel' : ''}" data-pts="${b.pts}" title="${b.label}" onclick="selectScore('${sid}','${crit}',${b.pts})"><span class="band-pts">${b.pts}</span><span class="band-lbl">${b.short}</span></button>`).join('');
-  return `<div class="crit-block" id="crit-${sid}-${crit}"><div class="crit-hdr"><span class="crit-label">${bank.label}</span><span class="crit-pts${cur !== null ? ' sc' : ''}" id="cs-${sid}-${crit}">${cur !== null ? cur : '—'}</span></div><div class="band-btns">${btns}</div></div>`;
+  const bi = config.bandInfo;
+  
+  // Disable individual selection for 'checklist' in Level 7 (synced from group)
+  const isAutoChecklist = (ST.level === '7' && crit === 'checklist');
+  
+  const btns = bi.map(b => `<button class="band-btn${cur === b.pts ? ' sel' : ''}" data-pts="${b.pts}" title="${b.label}" onclick="${isAutoChecklist ? '' : `selectScore('${sid}','${crit}',${b.pts})`}" ${isAutoChecklist ? 'style="cursor:not-allowed; opacity:0.7"' : ''}><span class="band-pts">${b.pts}</span><span class="band-lbl">${b.short}</span></button>`).join('');
+  return `<div class="crit-block" id="crit-${sid}-${crit}"><div class="crit-hdr"><span class="crit-label">${bank.label}</span><span class="crit-pts${cur !== null ? ' sc' : ''}" id="cs-${sid}-${crit}">${cur !== null ? cur : '—'}${isAutoChecklist ? ' <span style="font-size:9px;font-weight:400;color:var(--text3)">(Auto)</span>' : ''}</span></div><div class="band-btns">${btns}</div></div>`;
+}
+
+/* =====================================================================
+   GROUP CHECKLIST (Level 7)
+===================================================================== */
+function renderGroupChecklist(){
+  const wrap = document.getElementById('group-checklist-wrap');
+  if(!wrap) return;
+  const config = getRubric();
+  if(!config.groupChecklistItems) return;
+  
+  wrap.style.display = 'block';
+  const gid = ST.curGroup.id;
+  if(!ST.groupChecklist[gid]) ST.groupChecklist[gid] = {};
+  const gc = ST.groupChecklist[gid];
+  
+  const itemsHtml = config.groupChecklistItems.map(item => `
+    <div class="q-item${gc[item.id] ? ' chk' : ''}" style="margin:0; padding:6px 10px; border-radius:10px" onclick="toggleGroupCheckItem('${item.id}')">
+      <span class="q-check">${gc[item.id] ? '✓' : '○'}</span>
+      <span style="font-size:12px">${item.label}</span>
+    </div>
+  `).join('');
+  
+  wrap.innerHTML = `
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px">
+      <div style="font-size:11px; font-weight:800; color:var(--purple); text-transform:uppercase; letter-spacing:1px">📋 Group Work Checklist (Affects all members)</div>
+      <div style="font-size:12px; font-weight:700; color:var(--text2)">Group Score: ${Object.values(gc).filter(Boolean).length}/5</div>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:8px">${itemsHtml}</div>
+  `;
+}
+
+function toggleGroupCheckItem(itemId){
+  const gid = ST.curGroup.id;
+  if(!ST.groupChecklist[gid]) ST.groupChecklist[gid] = {};
+  ST.groupChecklist[gid][itemId] = !ST.groupChecklist[gid][itemId];
+  
+  renderGroupChecklist();
+  syncChecklistToStudents();
+  markUnsaved();
+}
+
+function syncChecklistToStudents(){
+  const gid = ST.curGroup.id;
+  const score = Object.values(ST.groupChecklist[gid] || {}).filter(Boolean).length;
+  
+  ST.curGroup.studentIds.forEach(sid => {
+    selectScore(sid, 'checklist', score);
+  });
 }
 
 /* =====================================================================
@@ -620,8 +710,9 @@ function updateTimerUI(sid){
 ===================================================================== */
 function buildQuestionsHTML(sid){
   const ev = getEv();
-  if(!ev.unit) return `<div style="font-size:11.5px;color:var(--text3);padding:8px 0">Select Unit 7 or 8 above.</div>`;
-  const uq = UQ[ev.unit];
+  const config = getRubric();
+  if(!ev.unit) return `<div style="font-size:11.5px;color:var(--text3);padding:8px 0">Select ${config.assessmentLabel} above.</div>`;
+  const uq = config.uq[ev.unit];
   const sEv = getStuEv(sid);
   const qc = sEv.questChecked?.[ev.unit] || {};
   const main = qc.main || Array(uq.main.length).fill(false);
@@ -631,13 +722,15 @@ function buildQuestionsHTML(sid){
   const mainHtml = uq.main.map((q, i) => `<div class="q-item${main[i] ? ' chk' : ''}" onclick="toggleQ('${sid}',${i})"><span class="q-check">${main[i] ? '✓' : '○'}</span><span>${q}</span></div>`).join('');
   const fuHtml = uq.followUp.map((q, i) => `<div class="q-item${fu === i ? ' chk-fu' : ''}" onclick="selectFU('${sid}',${i})"><span class="q-check">${fu === i ? '●' : '○'}</span><span>${q}</span></div>`).join('');
   
-  return `<div class="q-hdr"><span>📋 Task Questions</span><span style="font-size:10px;color:${checked === uq.main.length ? 'var(--green)' : 'var(--text3)'}">${checked}/${uq.main.length}</span></div><div class="q-list">${mainHtml}</div><div class="q-fu-lbl" style="font-size:11px; margin-top:12px; margin-bottom:6px">📋 Follow-up Question:</div><div class="q-list">${fuHtml}</div>`;
+  return `<div class="q-hdr"><span>📋 Task Requirements</span><span style="font-size:10px;color:${checked === uq.main.length ? 'var(--green)' : 'var(--text3)'}">${checked}/${uq.main.length}</span></div><div class="q-list">${mainHtml}</div><div class="q-fu-lbl" style="font-size:11px; margin-top:12px; margin-bottom:6px">📋 Follow-up Question:</div><div class="q-list">${fuHtml}</div>`;
 }
 
 function toggleQ(sid, i){
   const ev = getEv(); if(!ev.unit) return;
+  const config = getRubric();
+  const uq = config.uq[ev.unit];
   const sEv = getStuEv(sid); if(!sEv.questChecked) sEv.questChecked = {};
-  if(!sEv.questChecked[ev.unit]) sEv.questChecked[ev.unit] = { main: Array(UQ[ev.unit].main.length).fill(false), followUp: null };
+  if(!sEv.questChecked[ev.unit]) sEv.questChecked[ev.unit] = { main: Array(uq.main.length).fill(false), followUp: null };
   sEv.questChecked[ev.unit].main[i] = !sEv.questChecked[ev.unit].main[i];
   const qw = document.getElementById(`qwrap-${sid}`);
   if(qw) qw.innerHTML = buildQuestionsHTML(sid);
@@ -646,8 +739,10 @@ function toggleQ(sid, i){
 
 function selectFU(sid, i){
   const ev = getEv(); if(!ev.unit) return;
+  const config = getRubric();
+  const uq = config.uq[ev.unit];
   const sEv = getStuEv(sid); if(!sEv.questChecked) sEv.questChecked = {};
-  if(!sEv.questChecked[ev.unit]) sEv.questChecked[ev.unit] = { main: Array(UQ[ev.unit].main.length).fill(false), followUp: null };
+  if(!sEv.questChecked[ev.unit]) sEv.questChecked[ev.unit] = { main: Array(uq.main.length).fill(false), followUp: null };
   sEv.questChecked[ev.unit].followUp = (sEv.questChecked[ev.unit].followUp === i) ? null : i;
   const qw = document.getElementById(`qwrap-${sid}`);
   if(qw) qw.innerHTML = buildQuestionsHTML(sid);
@@ -659,8 +754,10 @@ function selectFU(sid, i){
 ===================================================================== */
 function buildGrammarHTML(sid){
   const ev = getEv();
-  if(!ev.unit) return `<div style="font-size:11.5px;color:var(--text3);padding:8px 0">Select Unit first.</div>`;
-  const uq = UQ[ev.unit];
+  const config = getRubric();
+  if(!ev.unit) return `<div style="font-size:11.5px;color:var(--text3);padding:8px 0">Select ${config.assessmentLabel} first.</div>`;
+  const uq = config.uq[ev.unit];
+  if(!uq || !uq.grammar) return '';
   const sEv = getStuEv(sid);
   if(!sEv.grammarChecked) sEv.grammarChecked = {};
   const gc = sEv.grammarChecked[ev.unit] || Array(uq.grammar.length).fill(false);
@@ -672,8 +769,11 @@ function buildGrammarHTML(sid){
 
 function toggleGrammar(sid, i){
   const ev = getEv(); if(!ev.unit) return;
+  const config = getRubric();
+  const uq = config.uq[ev.unit];
+  if(!uq || !uq.grammar) return;
   const sEv = getStuEv(sid); if(!sEv.grammarChecked) sEv.grammarChecked = {};
-  if(!sEv.grammarChecked[ev.unit]) sEv.grammarChecked[ev.unit] = Array(UQ[ev.unit].grammar.length).fill(false);
+  if(!sEv.grammarChecked[ev.unit]) sEv.grammarChecked[ev.unit] = Array(uq.grammar.length).fill(false);
   sEv.grammarChecked[ev.unit][i] = !sEv.grammarChecked[ev.unit][i];
   const gr = document.getElementById(`gwrap-${sid}`);
   if(gr) gr.innerHTML = buildGrammarHTML(sid);
@@ -692,15 +792,17 @@ function handleNotesInput(sid, val){
 
 function analyzeNotes(sid){
   const sEv = getStuEv(sid);
-  const raw = (sEv.liveNotes || '').toLowerCase();
-  if(raw.length < 3){ sEv.suggestedExtras = {}; sEv.synthesizedNote = ''; updateNotesUI(sid); return; }
+  const notes = (sEv.liveNotes || '').toLowerCase();
+  const config = getRubric();
+  if(notes.length < 3){ sEv.suggestedExtras = {}; sEv.synthesizedNote = ''; updateNotesUI(sid); return; }
   
   const result = {};
-  for(const crit of CRITERIA){
-    const kw = KEYW[crit];
+  for(const crit of config.criteria){
+    const kw = config.keyw[crit];
+    if(!kw) continue;
     const pos = new Set(); const neg = new Set();
-    kw.pos.forEach(({k, idx}) => { if(k.some(t => raw.includes(t))) pos.add(idx); });
-    kw.neg.forEach(({k, idx}) => { if(k.some(t => raw.includes(t))) neg.add(idx); });
+    kw.pos.forEach(({k, idx}) => { if(k.some(t => notes.includes(t))) pos.add(idx); });
+    kw.neg.forEach(({k, idx}) => { if(k.some(t => notes.includes(t))) neg.add(idx); });
     result[crit] = { pos: [...pos], neg: [...neg] };
   }
   sEv.suggestedExtras = result;
@@ -736,11 +838,12 @@ function updateNotesUI(sid){
   if(!chips) return;
   const analysis = sEv.suggestedExtras || {};
   const detected = [];
-  for(const crit of CRITERIA){
+  const config = getRubric();
+  for(const crit of config.criteria){
     const d = analysis[crit];
     if(!d) continue;
-    if(d.pos.length) detected.push({ label: BANKS[crit].label, type: 'pos' });
-    if(d.neg.length) detected.push({ label: BANKS[crit].label, type: 'neg' });
+    if(d.pos.length) detected.push({ label: config.banks[crit].label, type: 'pos' });
+    if(d.neg.length) detected.push({ label: config.banks[crit].label, type: 'neg' });
   }
   chips.innerHTML = detected.map(d => `<span class="chip chip-${d.type}">${d.label} ${d.type === 'pos' ? '✓' : '△'}</span>`).join('');
   if(synth){
@@ -779,9 +882,10 @@ function selectScore(sid, crit, pts){
 
 function updateScoreDisplay(sid){
   const sEv = getStuEv(sid);
+  const config = getRubric();
   const tot = stuTotal(sEv);
-  const pass = tot !== null && tot >= 10;
-  const pct = tot !== null ? Math.round((tot / 16) * 100) : 0;
+  const pass = tot !== null && tot >= config.passThreshold;
+  const pct = tot !== null ? Math.round((tot / config.totalPts) * 100) : 0;
   const col = scoreColor(tot);
   
   const totEl = document.getElementById(`tot-${sid}`);
@@ -808,9 +912,10 @@ function toggleComments(sid){
 
 function buildCommentsPanel(sid){
   const sEv = getStuEv(sid);
-  return CRITERIA.map(crit => {
+  const config = getRubric();
+  return config.criteria.map(crit => {
     const score = sEv.scores[crit];
-    const bank = BANKS[crit];
+    const bank = config.banks[crit];
     const bc = score !== null ? bank.band[score] : null;
     return `
       <div style="margin-bottom:10px">
@@ -850,23 +955,23 @@ function saveEval(silent = false){
 
 function printOne(sid){ if(!getEv().unit) return; saveEval(true); document.getElementById('print-container').innerHTML = buildSheet(sid); window.print(); }
 function printAll(){ if(!getEv().unit) return; saveEval(true); document.getElementById('print-container').innerHTML = ST.curGroup.studentIds.map(sid => buildSheet(sid)).join(''); window.print(); }
-
 function buildSheet(sid){
   const s = getStu(sid); const g = ST.curGroup; const ev = getEv(); const sEv = getStuEv(sid);
-  const tot = stuTotal(sEv); const pass = tot !== null && tot >= 10; const pct = tot !== null ? Math.round((tot/16)*100) : 0;
+  const config = getRubric();
+  const tot = stuTotal(sEv); const pass = tot !== null && tot >= config.passThreshold; const pct = tot !== null ? Math.round((tot/config.totalPts)*100) : 0;
 
   // Questions coverage
   let questNote = '';
   if(ev.unit && sEv.questChecked?.[ev.unit]){
-    const uq = UQ[ev.unit]; const qc = sEv.questChecked[ev.unit];
+    const uq = config.uq[ev.unit]; const qc = sEv.questChecked[ev.unit];
     const main = qc.main || []; const checked = main.filter(Boolean).length; const fu = qc.followUp;
     const unchecked = uq.main.filter((_, i) => !main[i]);
-    if(checked === uq.main.length && fu !== null){
-      questNote = `<span class="fs-q-ok">✓ All 4 questions addressed · Follow-up answered</span>`;
+    if(checked === uq.main.length && (uq.followUp.length === 0 || fu !== null)){
+      questNote = `<span class="fs-q-ok">✓ All requirements addressed</span>`;
     } else {
       let parts = [];
-      if(unchecked.length > 0) parts.push(`Questions not addressed: ${unchecked.map(q => `"${q}"`).join(', ')}`);
-      if(fu === null) parts.push('Remember to include an answer to one of the follow-up questions.');
+      if(unchecked.length > 0) parts.push(`Points not addressed: ${unchecked.map(q => `"${q}"`).join(', ')}`);
+      if(uq.followUp.length > 0 && fu === null) parts.push('Remember to include an answer to the follow-up question.');
       questNote = `<span class="fs-q-miss">📌 ${parts.join(' ')}</span>`;
     }
   }
@@ -874,32 +979,41 @@ function buildSheet(sid){
   // Grammar goals coverage
   let grammarNote = '';
   if(ev.unit && sEv.grammarChecked?.[ev.unit]){
-    const uq = UQ[ev.unit]; const gc = sEv.grammarChecked[ev.unit];
-    const checked = uq.grammar.filter((_, i) => gc[i]);
-    const unchecked = uq.grammar.filter((_, i) => !gc[i]);
-    if(unchecked.length === 0){
-      grammarNote = `<span class="fs-q-ok">✨ Goal met: Used all target grammar (${checked.join(', ')})</span>`;
-    } else if(checked.length > 0) {
-      grammarNote = `<span class="fs-q-warn" style="color:var(--purple);font-weight:700">📌 Used: ${checked.join(', ')} · Missing: ${unchecked.join(', ')}</span>`;
-    } else {
-      grammarNote = `<span class="fs-q-miss" style="color:var(--red);font-weight:700">❌ Goal: Try to incorporate ${unchecked.join(', ')}</span>`;
+    const uq = config.uq[ev.unit]; const gc = sEv.grammarChecked[ev.unit];
+    const checked = uq.grammar ? uq.grammar.filter((_, i) => gc[i]) : [];
+    const unchecked = uq.grammar ? uq.grammar.filter((_, i) => !gc[i]) : [];
+    if(uq.grammar && uq.grammar.length > 0){
+      if(unchecked.length === 0){
+        grammarNote = `<span class="fs-q-ok">✨ Goal met: Used all target grammar (${checked.join(', ')})</span>`;
+      } else if(checked.length > 0) {
+        grammarNote = `<span class="fs-q-warn" style="color:var(--purple);font-weight:700">📌 Used: ${checked.join(', ')} · Missing: ${unchecked.join(', ')}</span>`;
+      } else {
+        grammarNote = `<span class="fs-q-miss" style="color:var(--red);font-weight:700">❌ Goal: Try to incorporate ${unchecked.join(', ')}</span>`;
+      }
     }
   }
 
   // Rubric rows
-  const rubrRows = CRITERIA.map(crit => {
-    const bank = BANKS[crit]; const score = sEv.scores[crit] ?? null;
-    const bi = BAND_INFO.find(b => b.pts === score);
+  const rubrRows = config.criteria.map(crit => {
+    const bank = config.banks[crit]; const score = sEv.scores[crit] ?? null;
+    const bi = config.bandInfo.find(b => b.pts === score);
     const [bg, fg] = score !== null ? bandStyle(score) : ['#f9fafb', '#9ca3af'];
-    const desc = score === 4 ? 'Fluent · complete · complex' : score === 3 ? 'Well-developed · few errors' : score === 2 ? 'Basic · meets requirements' : score === 1 ? 'Developing · needs practice' : score === 0 ? 'Beginning stage' : '';
+    
+    // Dynamic description from level 6 logic (to keep it consistent)
+    let desc = '';
+    if(ST.level === '6'){
+       desc = score === 4 ? 'Fluent · complete · complex' : score === 3 ? 'Well-developed · few errors' : score === 2 ? 'Basic · meets requirements' : score === 1 ? 'Developing · needs practice' : score === 0 ? 'Beginning stage' : '';
+    } else {
+       desc = bi ? bi.label : '';
+    }
     return `<tr><td style="padding:7px 8px;border:1px solid #e5e7eb">${bank.label}</td><td class="fs-score-cell" style="padding:7px 8px;border:1px solid #e5e7eb;${score !== null ? `background:${bg};color:${fg}` : ''}">${score !== null ? score : '—'}</td><td style="padding:7px 8px;border:1px solid #e5e7eb;font-weight:600;${score !== null ? `color:${fg}` : ''}">${bi ? bi.label : 'Not scored'}</td><td style="padding:7px 8px;border:1px solid #e5e7eb;font-size:10.5px;color:#6b7280">${desc}</td></tr>`;
   }).join('');
   
-  const totalRow = tot !== null ? `<tr class="fs-total-row"><td style="padding:9px 8px;border:1px solid #e5e7eb;font-weight:800">TOTAL</td><td class="fs-score-cell fs-total-score" style="padding:9px 8px;border:1px solid #e5e7eb">${tot}</td><td style="padding:9px 8px;border:1px solid #e5e7eb;font-weight:700;color:#7c3aed">${pct}%</td><td style="padding:9px 8px;border:1px solid #e5e7eb"><span style="display:inline-block;padding:3px 11px;border-radius:99px;font-size:12px;font-weight:800;background:${pass ? '#d1fae5' : '#fee2e2'};color:${pass ? '#166534' : '#991b1b'}">${pass ? '✓ PASS' : '✕ FAIL'} · passing: 10/16 (62.5%)</span></td></tr>` : '';
+  const totalRow = tot !== null ? `<tr class="fs-total-row"><td style="padding:9px 8px;border:1px solid #e5e7eb;font-weight:800">TOTAL</td><td class="fs-score-cell fs-total-score" style="padding:9px 8px;border:1px solid #e5e7eb">${tot}</td><td style="padding:9px 8px;border:1px solid #e5e7eb;font-weight:700;color:#7c3aed">${pct}%</td><td style="padding:9px 8px;border:1px solid #e5e7eb"><span style="display:inline-block;padding:3px 11px;border-radius:99px;font-size:12px;font-weight:800;background:${pass ? '#d1fae5' : '#fee2e2'};color:${pass ? '#166534' : '#991b1b'}">${pass ? '✓ PASS' : '✕ FAIL'} · passing: ${config.passThreshold}/${config.totalPts} (${Math.round(config.passThreshold/config.totalPts*1000)/10}%)</span></td></tr>` : '';
 
   // Comments
-  const commentBlocks = CRITERIA.map(crit => {
-    const bank = BANKS[crit]; const score = sEv.scores[crit] ?? null; const bc = score !== null ? bank.band[score] : null;
+  const commentBlocks = config.criteria.map(crit => {
+    const bank = config.banks[crit]; const score = sEv.scores[crit] ?? null; const bc = score !== null ? bank.band[score] : null;
     const bsel = sEv.bandSel[crit] !== false; const exIds = sEv.extras[crit] || []; const exts = exIds.map(i => bank.extras[i]).filter(Boolean);
     if(!bc && exts.length === 0) return '';
     const [bg2, fg2] = score !== null ? bandStyle(score) : ['#f9fafb', '#374151'];
@@ -911,12 +1025,12 @@ function buildSheet(sid){
 
   return `<div class="fsheet">
     <div class="fs-hdr">
-      <div><div class="fs-prog">Universidad Adolfo Ibáñez · English Program</div><div class="fs-main-title">Oral Assessment Feedback</div><div class="fs-subtitle">Level ${ST.level} · Section ${g.section} · ${ev.unit ? 'Unit ' + ev.unit : ''}</div></div>
+      <div><div class="fs-prog">Universidad Adolfo Ibáñez · English Program</div><div class="fs-main-title">${config.evalTitle}</div><div class="fs-subtitle">Level ${ST.level} · Section ${g.section} · ${ev.unit ? config.assessmentLabel + ' ' + ev.unit : ''}</div></div>
       <div class="fs-meta">${ev.date || fmtDate()}<br>${g.name}</div>
     </div>
     <div class="fs-stu-box">
       <div><div class="fs-stu-name">${s.fn} ${s.ln}</div><div class="fs-stu-email">${s.email || ''}</div></div>
-      <div class="fs-score-center"><div class="fs-score-num">${tot !== null ? tot : '—'}</div><div class="fs-score-of">/ 16 points</div>${tot !== null ? `<div class="fs-score-pct" style="color:${pass ? '#16a34a' : '#dc2626'}">${pct}%</div><div class="fs-badge ${pass ? 'pass' : 'fail'}">${pass ? '✓ PASS' : '✕ FAIL'}</div>` : ''}</div>
+      <div class="fs-score-center"><div class="fs-score-num">${tot !== null ? tot : '—'}</div><div class="fs-score-of">/ ${config.totalPts} points</div>${tot !== null ? `<div class="fs-score-pct" style="color:${pass ? '#16a34a' : '#dc2626'}">${pct}%</div><div class="fs-badge ${pass ? 'pass' : 'fail'}">${pass ? '✓ PASS' : '✕ FAIL'}</div>` : ''}</div>
     </div>
     ${(questNote || grammarNote) ? `<div class="fs-q-coverage">${questNote}${questNote && grammarNote ? '<br>' : ''}${grammarNote}</div>` : ''}
     <div class="fs-section-lbl">Assessment Criteria</div>

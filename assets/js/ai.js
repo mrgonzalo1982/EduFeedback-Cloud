@@ -42,7 +42,8 @@ function openAIModal(){
 
 async function generateAIFeedback(sid){
   const ev = getEv();
-  if(!ev.unit) { showToast('📚 Please select Unit 7 or Unit 8 above first', 'var(--amber)'); return; }
+  const config = getRubric();
+  if(!ev.unit) { showToast(`📚 Please select ${config.assessmentLabel} above first`, 'var(--amber)'); return; }
 
   const key = getApiKey();
   if(!key){ openAIModal(); return; }
@@ -55,19 +56,22 @@ async function generateAIFeedback(sid){
   if(notes.length < 8){ showToast('✏️ Add some live notes first', 'var(--amber)'); return; }
 
   const s = getStu(sid); const firstName = s.fn.split(' ')[0];
-  const uq = UQ[ev.unit];
+  const uq = config.uq[ev.unit];
+  const criteria = config.criteria;
 
   // Gather selected extras & Detailed scores
-  const selectedExtras = CRITERIA.map(c => {
+  const selectedExtras = criteria.map(c => {
     const exIndices = sEv.extras[c] || [];
-    return exIndices.map(idx => BANKS[c].extras[idx]).filter(Boolean);
+    return exIndices.map(idx => config.banks[c].extras[idx]).filter(Boolean);
   }).flat().join('; ');
 
-  const criteriaScores = CRITERIA.map(c => {
+  const criteriaScores = criteria.map(c => {
     const score = sEv.scores[c];
-    const label = BANKS[c].label;
-    return `${label}: ${score !== undefined ? score + '/4' : 'N/A'}`;
-  }).join(', ');
+    const bank = config.banks[c];
+    const label = bank.label;
+    const desc = (score !== undefined && bank.band[score]) ? bank.band[score].text : 'No score assigned';
+    return `${label} (${score !== undefined ? score + '/' + (ST.level==='7'?5:4) : 'N/A'}): "${desc}"`;
+  }).join('\n');
 
   // Questions Context
   const qc = sEv.questChecked?.[ev.unit] || { main: Array(uq.main.length).fill(false), followUp: null };
@@ -82,29 +86,32 @@ async function generateAIFeedback(sid){
     missedQuestions = m.join('; ');
   }
 
-  // Pacing
-  const remaining = 60 - timer;
+  // Pacing (Target: ~60s per student)
+  const target = 60;
+  const remaining = target - timer;
   let pacingContext, pacingRule = '';
-  if (timer < 50) {
+  if (timer < 45) {
     pacingContext = `${timer}s spoken — ${remaining}s short of target`;
-    pacingRule = `Student spoke for only ${timer} seconds. Tell them: "developing your second example would naturally fill the remaining ${remaining} seconds."`;
-  } else if (timer > 75) {
-    pacingContext = `${timer}s spoken — ${timer - 60}s over target`;
-    pacingRule = `Student spoke for ${timer} seconds. Suggest they drop repetition and signal conclusion earlier.`;
+    pacingRule = `Student spoke for only ${timer} seconds. Suggest they expand their narrative details to reach the ${target}s mark.`;
+  } else if (timer > 80) {
+    pacingContext = `${timer}s spoken — ${timer - target}s over target`;
+    pacingRule = `Student spoke for ${timer} seconds. Suggest they be more concise with background details.`;
   } else {
     pacingContext = `${timer}s — within target zone ✓`;
   }
 
   // Score Tone
   const tot = stuTotal(sEv);
-  const totalScoreContext = tot !== null ? `${tot}/16` : 'Not fully scored';
+  const totalScoreContext = tot !== null ? `${tot}/${config.totalPts}` : 'Not fully scored';
   let toneRule;
-  if (tot === null)   toneRule = 'Direct, professional, and motivating.';
-  else if (tot <= 5)  toneRule = 'VERY compassionate. Lead with warmth. Acknowledge courage. No harsh corrections.';
-  else if (tot <= 9)  toneRule = 'Compassionate but clear. Praise what worked specifically, then one clear correction.';
-  else if (tot <= 11) toneRule = 'Direct and positive. Celebrate the pass. Push for one concrete improvement.';
-  else if (tot <= 14) toneRule = 'Challenger tone. Acknowledge strong performance. Push for precision.';
-  else                toneRule = 'C1 excellence mode. Tell them they approach advanced level.';
+  const passRatio = tot !== null ? tot / config.totalPts : 0;
+  
+  if (tot === null)      toneRule = 'Direct, professional, and motivating.';
+  else if (passRatio < .4)   toneRule = 'VERY compassionate. Lead with warmth. Acknowledge courage. No harsh corrections.';
+  else if (passRatio < .6)   toneRule = 'Compassionate but clear. Praise what worked specifically, then one clear correction.';
+  else if (passRatio < .75)  toneRule = 'Direct and positive. Celebrate the pass. Push for one concrete improvement.';
+  else if (passRatio < .9)   toneRule = 'Challenger tone. Acknowledge strong performance. Push for precision.';
+  else                      toneRule = 'C1 excellence mode. Tell them they approach advanced level.';
 
   // Mood
   const mood = sEv.mood || 'neutral';
@@ -116,45 +123,64 @@ async function generateAIFeedback(sid){
   };
   const moodNote = moodInstructions[mood] || '';
   
-  // Grammar Checklist Context
-  const gc = sEv.grammarChecked?.[ev.unit] || Array(uq.grammar.length).fill(false);
-  const usedGrammar = uq.grammar.filter((_, i) => gc[i]).join(', ');
-  const missedGrammar = uq.grammar.filter((_, i) => !gc[i]).join(', ');
-
-  const exactPhrase = (sEv.exactPhrase || '').trim();
-  const grammarErrorType = (sEv.grammarError || '').trim();
+  // Level 7 Specific Rules
+  let specialization = '';
+  if(ST.level === '7') {
+    const gid = ST.curGroup.id;
+    const aiUsed = ST.groupChecklist[gid]?.aiUse;
+    specialization = `
+SPECIAL CONTEXT (STORYTELLING):
+- The student is part of a group performance telling a story based on narrative themes.
+- Reflection/Lesson Learned is mandatory.
+- AI EVIDENCE RULE: ${aiUsed ? "They successfully used AI as a tool. PRAISE their reflective integration of AI evidence." : "They did NOT adequately show AI evidence. BRIEFLY mention the importance of using AI as a supportive tool for narrative structure."}`;
+  }
 
   // Prompt Construction
   const sysPrompt = `You are a B1 EFL oral assessment teacher. Transform input data into ONE paragraph of feedback (max 70 words, max clarity, plain text).
+${specialization}
+
+CORE ROLE: You are a supportive coach. Use the teacher's specific observations and exactly what the student said as your primary source of detail.
+
+HIERARCHY OF INFORMATION:
+1. PRIMARY: 'RUBRIC OBSERVATIONS' and 'EXACT PHRASE SAID'. These are your main sources for specific detail.
+2. SECONDARY: 'RUBRIC SCORES' (with Level Descriptions). These are the official standards you must reflect.
+3. CONTEXT: 'LIVE NOTES', 'MOOD', and 'PACING'. Use these to calibrate tone and coaching advice.
+
 STRUCTURE: 
-1. Strength (PRIORITIZE Rubric Observations and Exact Phrase). 
-2. Practical Correction (Specific grammar error or area with low score). 
-3. Practical Study Strategy (Actionable: record yourself, use flashcards, watch clips. NO technical phonetics/linguistics).
-Use ${firstName}. Speak like a supportive coach. No bullets.
+1. Strength (WEAVE in teacher observations, the exact phrase, or rubric standards). 
+2. Practical Correction (Address points with low scores or missed target grammar). 
+3. Practical Study Strategy (Actionable: record yourself, use flashcards, watch clips. NO technical phonetics).
+
+TONE: Apply the 'TONE RULE' and 'MOOD INSTRUCTIONS' strictly. Use ${firstName}. No bullets.
 
 BANNED JARGON: "phonetic", "alveolar", "dental fricative", "lexical", "subordinate clause", "syntax", "aspiration", "prosody".
 BANNED: "great job", "well done", "keep it up", "overall", "in conclusion", "it's important to", "make sure to", "remember to", "good effort", "I recommend".`;
 
-  const userPrompt = `STUDENT: ${firstName} | Unit ${ev.unit}: ${uq.topic}
-RUBRIC SCORES: ${criteriaScores}
-RUBRIC OBSERVATIONS: ${selectedExtras || 'None selected'}
-PACING: ${pacingContext}
-MOOD: ${mood}
-QUESTIONS: ${questContext}
-MISSED QUESTIONS: ${missedQuestions}
-TARGET GRAMMAR ACHIEVED: [${usedGrammar || 'None'}]
-TARGET GRAMMAR MISSED: [${missedGrammar || 'None'}]
+  const userPrompt = `STUDENT: ${firstName} | ${config.assessmentLabel} ${ev.unit}: ${uq.topic}
+LEVEL: ${ST.level}
+TONE RULE: ${toneRule}
+MOOD INSTRUCTIONS: ${moodNote}
+
+DATA:
+- RUBRIC SCORES: ${criteriaScores}
+- RUBRIC OBSERVATIONS: ${selectedExtras || 'None selected'}
+- PACING: ${pacingContext}
+- REQUIREMENTS ADDRESSED: ${questContext}
+- MISSED REQUIREMENTS: ${missedQuestions}
+${sEv.grammarChecked?.[ev.unit] ? `- TARGET GRAMMAR ACHIEVED: [${uq.grammar.filter((_, i) => sEv.grammarChecked[ev.unit][i]).join(', ') || 'None'}]
+- TARGET GRAMMAR MISSED: [${uq.grammar.filter((_, i) => !sEv.grammarChecked[ev.unit][i]).join(', ') || 'None'}]` : ''}
+- GRAMMAR ERROR TYPE: ${grammarErrorType || 'Not specified'}
+- LIVE NOTES: ${notes}
+- EXACT PHRASE SAID: "${exactPhrase || 'Not captured'}"
+
 ${sEv.strength ? `TEACHER INITIAL STRENGTH: "${sEv.strength}"` : ''}
 ${sEv.nextGoal ? `TEACHER INITIAL GOAL: "${sEv.nextGoal}"` : ''}
-GRAMMAR ERROR TYPE: ${grammarErrorType || 'Not specified'}
-LIVE NOTES: ${notes}
-${exactPhrase ? `EXACT PHRASE SAID: "${exactPhrase}"` : ''}
 
 INSTRUCTIONS:
-${pacingRule ? `- PACING: ${pacingRule}` : ''}
-${missedQuestions !== 'None' ? `- MISSED QUESTIONS: Name them.` : ''}
-${missedGrammar ? `- GRAMMAR: Advise on using ${missedGrammar} more effectively.` : ''}
-${exactPhrase ? `- CITE: Weave "${exactPhrase}" into the feedback.` : ''}`;
+1. Synthesize all data above into a single, cohesive paragraph.
+2. If PACING was short/long, follow: ${pacingRule || 'Mention it briefly if relevant'}.
+3. If REQUIREMENTS or GRAMMAR were missed, address them constructively.
+4. If an EXACT PHRASE was captured, weave it naturally into the feedback.`;
 
   setAIBtn(sid, 'loading');
   try {
