@@ -77,9 +77,8 @@ async function generateAIFeedback(sid){
   const criteriaScores = criteria.map(c => {
     const score = sEv.scores[c];
     const bank = config.banks[c];
-    const label = bank.label;
-    const desc = (score !== undefined && bank.band[score]) ? bank.band[score].text : 'No score assigned';
-    return `${label} (${score !== undefined ? score + '/' + (ST.level==='7'?5:4) : 'N/A'}): "${desc}"`;
+    const label = config.bandInfo.find(b => b.pts === score)?.label || 'N/A';
+    return `${c.toUpperCase()} (${score !== undefined ? score + '/' + (ST.level==='7'?5:4) : 'N/A'}): ${label}`;
   }).join('\n');
 
   // Questions Context
@@ -167,25 +166,22 @@ SPECIAL CONTEXT (STORYTELLING):
   }
 
   // Prompt Construction
-  const sysPrompt = `You are a B1 EFL oral assessment teacher. Transform input data into ONE paragraph of feedback (max 70 words, max clarity, plain text).
+  const sysPrompt = `You are a B1 EFL oral assessment teacher. Transform input data into ONE paragraph of feedback (MAX 50 WORDS, absolute clarity, plain text).
 ${specialization}
 
-CORE ROLE: You are a supportive coach. Use the teacher's specific observations and exactly what the student said as your primary source of detail.
+CORE ROLE: You are a direct coach. Be REALISTIC. Do NOT use generic or formal praise. 
 
-HIERARCHY OF INFORMATION:
-1. PRIMARY: 'RUBRIC OBSERVATIONS' and 'EXACT PHRASE SAID'. These are your main sources for specific detail.
-2. SECONDARY: 'RUBRIC SCORES' (with Level Descriptions). These are the official standards you must reflect.
-3. CONTEXT: 'LIVE NOTES', 'MOOD', and 'PACING'. Use these to calibrate tone and coaching advice.
+GROUNDING RULES:
+1. ONLY use details from 'LIVE NOTES' or 'EXACT PHRASE'. 
+2. If notes are empty, do NOT invent specifics (e.g. "You were engaging" is BANNED). Focus strictly on the criteria labels.
+3. NEVER use formal phrases like "flawless narrative structure" or "showcasing your...". Speak like a human teacher.
 
 STRUCTURE: 
-1. Strength (WEAVE in teacher observations, the exact phrase, or rubric standards). 
-2. Practical Correction (Address points with low scores or missed target grammar). 
-3. Practical Study Strategy (Actionable: record yourself, use flashcards, watch clips. NO technical phonetics).
+1. Strength (Direct and based ONLY on evidence). 
+2. Correction (Direct addressing of low scores or missed grammar). 
+3. Study Strategy (Actionable for a student).
 
-TONE: Apply the 'TONE RULE' and 'MOOD INSTRUCTIONS' strictly. Use ${firstName}. No bullets.
-
-BANNED JARGON: "phonetic", "alveolar", "dental fricative", "lexical", "subordinate clause", "syntax", "aspiration", "prosody".
-BANNED: "great job", "well done", "keep it up", "overall", "in conclusion", "it's important to", "make sure to", "remember to", "good effort", "I recommend".`;
+TONE: Use ${firstName}. No "filler" sentences. Start directly with the observation.`;
 
   const userPrompt = `STUDENT: ${firstName} | ${config.assessmentLabel} ${ev.unit}: ${uq.topic}
 LEVEL: ${ST.level}
@@ -193,7 +189,8 @@ TONE RULE: ${toneRule}
 MOOD INSTRUCTIONS: ${moodNote}
 
 DATA:
-- RUBRIC SCORES: ${criteriaScores}
+- RUBRIC SCORES (internal codes): 
+${criteriaScores}
 - RUBRIC OBSERVATIONS: ${selectedExtras || 'None selected'}
 - PACING: ${pacingContext}
 - REQUIREMENTS ADDRESSED: ${questContext}
@@ -201,17 +198,13 @@ DATA:
 ${sEv.grammarChecked?.[ev.unit] ? `- TARGET GRAMMAR ACHIEVED: [${uq.grammar.filter((_, i) => sEv.grammarChecked[ev.unit][i]).join(', ') || 'None'}]
 - TARGET GRAMMAR MISSED: [${uq.grammar.filter((_, i) => !sEv.grammarChecked[ev.unit][i]).join(', ') || 'None'}]` : ''}
 - GRAMMAR ERROR TYPE: ${grammarErrorType || 'Not specified'}
-- LIVE NOTES: ${notes}
-- EXACT PHRASE SAID: "${exactPhrase || 'Not captured'}"
-
-${sEv.strength ? `TEACHER INITIAL STRENGTH: "${sEv.strength}"` : ''}
-${sEv.nextGoal ? `TEACHER INITIAL GOAL: "${sEv.nextGoal}"` : ''}
+- LIVE NOTES (Primary Source): ${notes}
+- EXACT PHRASE SAID (Primary Source): "${exactPhrase || 'Not captured'}"
 
 INSTRUCTIONS:
-1. Synthesize all data above into a single, cohesive paragraph.
-2. If PACING was short/long, follow: ${pacingRule || 'Mention it briefly if relevant'}.
-3. If REQUIREMENTS or GRAMMAR were missed, address them constructively.
-4. If an EXACT PHRASE was captured, weave it naturally into the feedback.`;
+1. Synthesize into exactly ONE paragraph of max 50 words.
+2. If LIVE NOTES are absent, keep it very brief and only mention the score areas.
+3. Apply TONE RULE and MOOD INSTRUCTIONS.`;
 
   setAIBtn(sid, 'loading');
   try {
