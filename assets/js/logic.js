@@ -419,7 +419,7 @@ function openGroupEval(gid){
   if(!g) return;
   ST.curGroup = g;
   ST.activeTab = 0;
-  if(!ST.evals[gid]) ST.evals[gid] = { unit: null, date: fmtDate(), students: {} };
+  if(!ST.evals[gid]) ST.evals[gid] = { unit: null, date: fmtDate(), students: {}, groupTopic: null, groupFollowUp: null };
   const ev = ST.evals[gid];
   g.studentIds.forEach(sid => {
     if(!ev.students[sid]) {
@@ -618,12 +618,50 @@ function renderGroupChecklist(){
     </div>
   `).join('');
   
+  const ev = getEv();
+  const uq = config.uq[ev.unit];
+  
+  let topicHtml = '';
+  let fuHtml = '';
+  
+  if (uq) {
+    topicHtml = `
+      <div style="margin-top:15px; border-top:1px solid var(--border); padding-top:12px">
+        <div style="font-size:11px; font-weight:800; color:var(--blue); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px">📖 Story Topic (Selected by Group)</div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:6px">
+          ${uq.main.map((topic, i) => `
+            <div class="q-item${ev.groupTopic === i ? ' chk-fu' : ''}" style="margin:0; padding:6px 10px; border-radius:10px" onclick="setGroupTopic(${i})">
+              <span class="q-check">${ev.groupTopic === i ? '●' : '○'}</span>
+              <span style="font-size:12px">${topic}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+    
+    fuHtml = `
+      <div style="margin-top:15px; border-top:1px solid var(--border); padding-top:12px">
+        <div style="font-size:11px; font-weight:800; color:var(--amber); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px">📋 Follow-up Question (One student responds)</div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:6px">
+          ${uq.followUp.map((q, i) => `
+            <div class="q-item${ev.groupFollowUp === i ? ' chk-fu' : ''}" style="margin:0; padding:6px 10px; border-radius:10px" onclick="setGroupFollowUp(${i})">
+              <span class="q-check">${ev.groupFollowUp === i ? '●' : '○'}</span>
+              <span style="font-size:12px">${q}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
   wrap.innerHTML = `
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px">
       <div style="font-size:11px; font-weight:800; color:var(--purple); text-transform:uppercase; letter-spacing:1px">📋 Group Work Checklist (Affects all members)</div>
       <div style="font-size:12px; font-weight:700; color:var(--text2)">Group Score: ${Object.values(gc).filter(Boolean).length}/5</div>
     </div>
     <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:8px">${itemsHtml}</div>
+    ${topicHtml}
+    ${fuHtml}
   `;
 }
 
@@ -634,6 +672,28 @@ function toggleGroupCheckItem(itemId){
   
   renderGroupChecklist();
   syncChecklistToStudents();
+  markUnsaved();
+}
+
+function setGroupTopic(idx){
+  const ev = getEv();
+  ev.groupTopic = ev.groupTopic === idx ? null : idx;
+  renderGroupChecklist();
+  ST.curGroup.studentIds.forEach(sid => {
+    const qw = document.getElementById(`qwrap-${sid}`);
+    if(qw) qw.innerHTML = buildQuestionsHTML(sid);
+  });
+  markUnsaved();
+}
+
+function setGroupFollowUp(idx){
+  const ev = getEv();
+  ev.groupFollowUp = ev.groupFollowUp === idx ? null : idx;
+  renderGroupChecklist();
+  ST.curGroup.studentIds.forEach(sid => {
+    const qw = document.getElementById(`qwrap-${sid}`);
+    if(qw) qw.innerHTML = buildQuestionsHTML(sid);
+  });
   markUnsaved();
 }
 
@@ -740,6 +800,22 @@ function buildQuestionsHTML(sid){
   const config = getRubric();
   if(!ev.unit) return `<div style="font-size:11.5px;color:var(--text3);padding:8px 0">Select ${config.assessmentLabel} above.</div>`;
   const uq = config.uq[ev.unit];
+  
+  if (ST.level === '7') {
+    const topicName = ev.groupTopic !== null ? uq.main[ev.groupTopic] : '<span style="color:var(--amber)">Not selected (See top panel)</span>';
+    const fuName = ev.groupFollowUp !== null ? uq.followUp[ev.groupFollowUp] : '<span style="color:var(--amber)">Not selected (See top panel)</span>';
+    
+    return `
+      <div style="padding:10px; background:rgba(139,92,246,0.05); border:1px solid rgba(139,92,246,0.15); border-radius:8px">
+        <div style="font-size:10px; font-weight:800; color:var(--purple); text-transform:uppercase; margin-bottom:4px">📖 Group Story Topic:</div>
+        <div style="font-size:12px; font-weight:600; margin-bottom:12px; line-height:1.4">${topicName}</div>
+        
+        <div style="font-size:10px; font-weight:800; color:var(--amber); text-transform:uppercase; margin-bottom:4px">📋 Group Follow-up:</div>
+        <div style="font-size:12px; font-weight:600; line-height:1.4">${fuName}</div>
+      </div>
+    `;
+  }
+
   const sEv = getStuEv(sid);
   const qc = sEv.questChecked?.[ev.unit] || {};
   const main = qc.main || Array(uq.main.length).fill(false);

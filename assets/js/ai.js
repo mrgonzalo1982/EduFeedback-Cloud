@@ -83,16 +83,25 @@ async function generateAIFeedback(sid){
   }).join('\n');
 
   // Questions Context
-  const qc = sEv.questChecked?.[ev.unit] || { main: Array(uq.main.length).fill(false), followUp: null };
-  const mainQs = uq.main.filter((_, i) => qc.main[i]).join(', ');
-  const missedQs = uq.main.filter((_, i) => !qc.main[i]);
-  const fuQ = qc.followUp !== null ? uq.followUp[qc.followUp] : null;
-  const questContext = `Addressed: [${mainQs || 'None'}]. Follow-up: [${fuQ || 'None'}]`;
+  let questContext = '';
   let missedQuestions = 'None';
-  if (missedQs.length > 0 || qc.followUp === null) {
-    const m = [...missedQs.map(q => `"${q}"`)];
-    if (qc.followUp === null) m.push('the follow-up question');
-    missedQuestions = m.join('; ');
+
+  if (ST.level === '7') {
+    const topicName = ev.groupTopic !== null ? uq.main[ev.groupTopic] : 'Not specified';
+    const fuName = ev.groupFollowUp !== null ? uq.followUp[ev.groupFollowUp] : 'Not specified';
+    questContext = `Group Story Topic: [${topicName}]. Group Follow-up: [${fuName}]`;
+    if (ev.groupTopic === null) missedQuestions = 'The group story topic selection';
+  } else {
+    const qc = sEv.questChecked?.[ev.unit] || { main: Array(uq.main.length).fill(false), followUp: null };
+    const mainQs = uq.main.filter((_, i) => qc.main[i]).join(', ');
+    const missedQs = uq.main.filter((_, i) => !qc.main[i]);
+    const fuQ = qc.followUp !== null ? uq.followUp[qc.followUp] : null;
+    questContext = `Addressed: [${mainQs || 'None'}]. Follow-up: [${fuQ || 'None'}]`;
+    if (missedQs.length > 0 || qc.followUp === null) {
+      const m = [...missedQs.map(q => `"${q}"`)];
+      if (qc.followUp === null) m.push('the follow-up question');
+      missedQuestions = m.join('; ');
+    }
   }
 
   // Pacing (Target: ~60s per student)
@@ -135,16 +144,26 @@ async function generateAIFeedback(sid){
   };
   const moodNote = moodInstructions[mood] || '';
   
-  // Level 7 Specific Rules
+  // Level 7 Specific Rules (Specialized for Last Student)
   let specialization = '';
   if(ST.level === '7') {
     const gid = ST.curGroup.id;
-    const aiUsed = ST.groupChecklist[gid]?.aiUse;
-    specialization = `
-SPECIAL CONTEXT (STORYTELLING):
-- The student is part of a group performance telling a story based on narrative themes.
+    const sIds = ST.curGroup.studentIds;
+    const isLast = sid === sIds[sIds.length - 1];
+    
+    if (isLast) {
+      const aiUsed = ST.groupChecklist[gid]?.aiUse;
+      specialization = `
+SPECIAL CONTEXT (STORYTELLING - FINAL PRESENTER):
+- This student is the FINAL presenter of their group and handles the AI reflection.
 - Reflection/Lesson Learned is mandatory.
 - AI EVIDENCE RULE: ${aiUsed ? "They successfully used AI as a tool. PRAISE their reflective integration of AI evidence." : "They did NOT adequately show AI evidence. BRIEFLY mention the importance of using AI as a supportive tool for narrative structure."}`;
+    } else {
+      specialization = `
+SPECIAL CONTEXT (STORYTELLING):
+- This student is part of a group performance. Focus on their individual narrative delivery and transitions.
+- Do NOT mention AI reflection/evidence unless it appears explicitly in their 'LIVE NOTES'.`;
+    }
   }
 
   // Prompt Construction
