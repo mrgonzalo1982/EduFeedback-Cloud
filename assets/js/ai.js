@@ -108,6 +108,9 @@ async function generateAIFeedback(sid){
   } else {
     pacingContext = `${timer}s — within target zone ✓`;
   }
+  const grammarErrorType = sEv.grammarError || 'Not specified';
+  const exactPhrase = sEv.exactPhrase || 'Not captured';
+
 
   // Score Tone
   const tot = stuTotal(sEv);
