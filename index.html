@@ -55,7 +55,7 @@
     <nav id="breadcrumb" class="breadcrumb"></nav>
     <div class="hdr-btns">
       <span id="ai-status-badge" class="ai-badge ai-off" onclick="openAIModal()" title="Configure AI Feedback">🤖 AI: OFF</span>
-      <div id="cloud-sync-wrap">
+      <div id="cloud-sync-wrap" style="display:flex; align-items:center; gap:8px">
         <button id="btn-cloud-login" class="btn btn-ghost btn-sm" style="border-radius:20px" onclick="handleLogin()" title="Sync with Google Cloud">☁️ <span class="btn-lbl">Sync</span></button>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="exportData()">⬇ <span class="btn-lbl">Export</span></button>
@@ -345,6 +345,9 @@
     const wrap = document.getElementById('cloud-sync-wrap');
     if (wrap) {
       wrap.innerHTML = `
+        <div id="sync-indicator" style="font-size:11px; color:var(--green); font-weight:700; display:flex; align-items:center; gap:4px; margin-right:4px" title="Changes are synced to the cloud">
+          <span style="display:inline-block; width:6px; height:6px; background:var(--green); border-radius:50%"></span> Cloud Active
+        </div>
         <button class="btn btn-sm" style="background:var(--green-b); border:1px solid var(--green-br); color:var(--green); border-radius:20px" onclick="handleLogout()" title="Conectado como ${user.displayName}">
           ✅ <span class="btn-lbl">${user.displayName.split(' ')[0]}</span>
         </button>
@@ -439,11 +442,16 @@
   // Override persist in logic.js to also save to cloud
   const oldPersist = window.persist;
   window.persist = () => {
-    oldPersist();
+    if (typeof oldPersist === 'function') oldPersist();
     if (currentUser) {
+      const indicator = document.getElementById('sync-indicator');
+      if (indicator) indicator.style.opacity = '0.5';
+      
       saveToCloud({
         groups: ST.groups,
         evals: ST.evals
+      }).then(() => {
+        if (indicator) indicator.style.opacity = '1';
       });
     }
   };

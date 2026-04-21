@@ -1175,7 +1175,13 @@ function exportData(){
 function importData(e){
   const f = e.target.files[0];
   const r = new FileReader();
-  r.onload = ev => { const d = JSON.parse(ev.target.result); Object.assign(ST, d); renderDash(); };
+  r.onload = ev => { 
+    const d = JSON.parse(ev.target.result); 
+    Object.assign(ST, d); 
+    renderDash(); 
+    if(typeof persist === 'function') persist();
+    showToast("Data imported and synced!", "var(--green)");
+  };
   r.readAsText(f);
 }
 

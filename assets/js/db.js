@@ -55,27 +55,110 @@ export async function logout() {
 // Data Sync
 async function syncUserFromCloud(uid) {
     const userRef = doc(db, "users", uid);
+    
+    // First, try to get a one-time snapshot to do a merge if needed
+    try {
+        const snap = await getDoc(userRef);
+        if (snap.exists()) {
+            const cloudData = snap.data();
+            mergeLocalAndCloud(cloudData);
+        } else {
+            // Cloud is empty, push what we have locally
+            forcePushLocalToCloud();
+        }
+    } catch (e) {
+        console.error("Initial Sync Error:", e);
+    }
+
     userDocUnsub = onSnapshot(userRef, (snapshot) => {
         if (snapshot.exists()) {
             const data = snapshot.data();
-            
-            // Sync AI config
-            if (data.groqKey) {
-                localStorage.setItem('ef_groq_key', data.groqKey);
-                if (window.updateAIBadge) window.updateAIBadge();
-            }
+            applyCloudSnapshot(data);
+        }
+    });
+}
 
-            // Sync Application State (ST)
-            // We use a window global 'ST' from logic.js
-            if (window.ST) {
-                if (data.groups) window.ST.groups = data.groups;
-                if (data.evals) window.ST.evals = data.evals;
-                if (data.students) window.STUDENTS = data.students;
-                
-                // Re-render dashboard if we are there
-                if (window.renderDash) window.renderDash();
+function mergeLocalAndCloud(cloudData) {
+    console.log("Merging Cloud and Local data...");
+    if (!window.ST) return;
+    
+    let changed = false;
+    
+    // Merge Groups
+    if (cloudData.groups) {
+        for (const key in cloudData.groups) {
+            if (!ST.groups[key]) {
+                ST.groups[key] = cloudData.groups[key];
+                changed = true;
+            } else {
+                // Merge individual groups within section
+                cloudData.groups[key].forEach(cg => {
+                    if (!ST.groups[key].find(lg => lg.id === cg.id)) {
+                        ST.groups[key].push(cg);
+                        changed = true;
+                    }
+                });
             }
         }
+    }
+    
+    // Merge Evals
+    if (cloudData.evals) {
+        for (const id in cloudData.evals) {
+            if (!ST.evals[id]) {
+                ST.evals[id] = cloudData.evals[id];
+                changed = true;
+            }
+        }
+    }
+
+    if (changed) {
+        if (window.renderDash) window.renderDash();
+        // If we merged news from cloud, no need to push back immediately 
+        // to avoid loops, but we should update LocalStorage
+        localStorage.setItem('ef_v2', JSON.stringify({
+            groups: ST.groups,
+            evals: ST.evals,
+            customStudents: window.STUDENTS !== window.DEFAULT_STUDENTS ? window.STUDENTS : null
+        }));
+    } else {
+        // If nothing changed from cloud, maybe local has more? 
+        // Force a persist to ensure cloud is up to date
+        forcePushLocalToCloud();
+    }
+}
+
+function applyCloudSnapshot(data) {
+    if (!window.ST) return;
+    let changed = false;
+
+    if (data.groqKey) {
+        localStorage.setItem('ef_groq_key', data.groqKey);
+        if (window.updateAIBadge) window.updateAIBadge();
+    }
+
+    if (data.groups) {
+        ST.groups = data.groups;
+        changed = true;
+    }
+    if (data.evals) {
+        ST.evals = data.evals;
+        changed = true;
+    }
+    if (data.students) {
+        window.STUDENTS = data.students;
+        changed = true;
+    }
+    
+    if (changed && window.renderDash) window.renderDash();
+}
+
+export async function forcePushLocalToCloud() {
+    if (!currentUser || !window.ST) return;
+    console.log("Force-syncing Local data to Cloud...");
+    await saveToCloud({
+        groups: ST.groups,
+        evals: ST.evals
     });
 }
 
