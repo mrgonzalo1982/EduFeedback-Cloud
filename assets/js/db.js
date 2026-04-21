@@ -201,6 +201,50 @@ export async function forcePullFromCloud() {
     }
 }
 
+export async function broadcastGroupResults(groupId) {
+    if (!currentUser || !window.ST) return;
+    const ev = window.ST.evals[groupId];
+    const group = window.ST.groups[window.ST.level + '-' + window.ST.section]?.find(g => g.id === groupId);
+    if (!ev || !group) return;
+
+    const teacherName = currentUser.displayName || "Your Teacher";
+    const teacherEmail = currentUser.email;
+
+    const promises = group.studentIds.map(async (sid) => {
+        const student = window.getStu(sid);
+        const sEv = ev.students[sid];
+        if (!student || !sEv || !sEv.custom) return; // Skip if no feedback
+
+        const payload = {
+            teacherName,
+            teacherEmail,
+            unit: ev.unit,
+            date: ev.date || new Date().toLocaleDateString(),
+            score: window.stuTotal(sEv),
+            maxScore: window.getRubric().totalPts,
+            feedback: sEv.custom,
+            nextGoal: sEv.nextGoal || "",
+            scores: sEv.scores,
+            studentEmail: student.email,
+            timestamp: serverTimestamp()
+        };
+
+        return publishToStudentFeed(student.email, groupId + '_' + sid, payload);
+    });
+
+    await Promise.all(promises);
+}
+
+async function publishToStudentFeed(email, id, payload) {
+    if (!email) return;
+    // We use a hashed or direct email path for the student results.
+    // For simplicity in this demo, we'll store under a collection indexed by email.
+    // In production, you'd use a subcollection of the student's own UID if possible,
+    // or a global collection with a 'targetEmail' field for query purposes.
+    const feedbackRef = doc(db, "student_results", email.toLowerCase().trim(), "evals", id);
+    await setDoc(feedbackRef, payload, { merge: true });
+}
+
 export async function saveToCloud(data) {
     if (!currentUser) return;
     try {

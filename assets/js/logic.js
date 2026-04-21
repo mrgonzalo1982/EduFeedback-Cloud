@@ -418,7 +418,7 @@ function openGroupEval(gid){
   if(!g) return;
   ST.curGroup = g;
   ST.activeTab = 0;
-  if(!ST.evals[gid]) ST.evals[gid] = { unit: null, date: fmtDate(), students: {}, groupTopic: null, groupFollowUp: null };
+  if(!ST.evals[gid]) ST.evals[gid] = { unit: null, date: fmtDate(), students: {}, groupTopic: null, groupFollowUp: null, published: false };
   const ev = ST.evals[gid];
   g.studentIds.forEach(sid => {
     if(!ev.students[sid]) {
@@ -436,7 +436,7 @@ function renderEvalScreen(){
   const nameEl = document.getElementById('eval-group-name');
   const metaEl = document.getElementById('eval-meta');
   if(nameEl) nameEl.textContent = g.name;
-  if(metaEl) metaEl.textContent = `Level ${ST.level} · Section ${g.section}`;
+  if(metaEl) metaEl.innerHTML = `Level ${ST.level} · Section ${g.section}  <button id="btn-publish" class="btn btn-ghost btn-sm" style="margin-left:12px; border:1px solid ${ev.published ? 'var(--green-br)' : 'var(--purple-br)'}; color:${ev.published ? 'var(--green)' : 'var(--purple)'}" onclick="handlePublish()">${ev.published ? '✅ Published' : '📤 Publish to Students'}</button>`;
   
   // Render Dynamic Assessment/Unit Buttons
   const unitWrap = document.querySelector('.unit-sel');
@@ -463,6 +463,29 @@ function refreshUnitBtns(u){
   const u8 = document.getElementById('ubtn8');
   if(u7) u7.classList.toggle('active', u === 7);
   if(u8) u8.classList.toggle('active', u === 8);
+}
+
+async function handlePublish(){
+  if(!ST.curGroup) return;
+  const ev = getEv();
+  if(!ev.unit) { showToast("Select an assessment unit first!", "var(--red)"); return; }
+  
+  if(!confirm("Publish results to the student portal? Each student will see only their own feedback.")) return;
+  
+  ev.published = true;
+  showToast("Publishing...", "var(--purple)");
+  
+  try {
+    if(window.broadcastGroupResults) {
+      await window.broadcastGroupResults(ST.curGroup.id);
+      showToast("Results published successfully!", "var(--green)");
+      renderEvalScreen();
+      persist();
+    }
+  } catch(e) {
+    console.error("Publish Error:", e);
+    showToast("Error publishing results.", "var(--red)");
+  }
 }
 
 function selectUnit(u){
