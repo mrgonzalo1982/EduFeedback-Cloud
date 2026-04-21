@@ -87,14 +87,14 @@ function mergeLocalAndCloud(cloudData) {
     // Merge Groups
     if (cloudData.groups) {
         for (const key in cloudData.groups) {
-            if (!ST.groups[key]) {
-                ST.groups[key] = cloudData.groups[key];
+            if (!window.ST.groups[key]) {
+                window.ST.groups[key] = cloudData.groups[key];
                 changed = true;
             } else {
                 // Merge individual groups within section
                 cloudData.groups[key].forEach(cg => {
-                    if (!ST.groups[key].find(lg => lg.id === cg.id)) {
-                        ST.groups[key].push(cg);
+                    if (!window.ST.groups[key].find(lg => lg.id === cg.id)) {
+                        window.ST.groups[key].push(cg);
                         changed = true;
                     }
                 });
@@ -105,8 +105,8 @@ function mergeLocalAndCloud(cloudData) {
     // Merge Evals
     if (cloudData.evals) {
         for (const id in cloudData.evals) {
-            if (!ST.evals[id]) {
-                ST.evals[id] = cloudData.evals[id];
+            if (!window.ST.evals[id]) {
+                window.ST.evals[id] = cloudData.evals[id];
                 changed = true;
             }
         }
@@ -117,8 +117,8 @@ function mergeLocalAndCloud(cloudData) {
         // If we merged news from cloud, no need to push back immediately 
         // to avoid loops, but we should update LocalStorage
         localStorage.setItem('ef_v2', JSON.stringify({
-            groups: ST.groups,
-            evals: ST.evals,
+            groups: window.ST.groups,
+            evals: window.ST.evals,
             customStudents: window.STUDENTS !== window.DEFAULT_STUDENTS ? window.STUDENTS : null
         }));
     } else {
@@ -138,11 +138,11 @@ function applyCloudSnapshot(data) {
     }
 
     if (data.groups) {
-        ST.groups = data.groups;
+        window.ST.groups = data.groups;
         changed = true;
     }
     if (data.evals) {
-        ST.evals = data.evals;
+        window.ST.evals = data.evals;
         changed = true;
     }
     if (data.students) {
@@ -157,8 +157,8 @@ export async function forcePushLocalToCloud() {
     if (!currentUser || !window.ST) return;
     console.log("Force-syncing Local data to Cloud...");
     await saveToCloud({
-        groups: ST.groups,
-        evals: ST.evals
+        groups: window.ST.groups,
+        evals: window.ST.evals
     });
 }
 
