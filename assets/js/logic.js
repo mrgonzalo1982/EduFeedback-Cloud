@@ -60,6 +60,11 @@ function avatarGrad(id){
   const c = [['#8b5cf6','#ec4899'],['#3b82f6','#8b5cf6'],['#10b981','#3b82f6'],['#f59e0b','#ef4444'],['#ec4899','#f97316'],['#6366f1','#22d3ee']];
   return `linear-gradient(135deg,${c[id.charCodeAt(0) % c.length].join(',')})`; 
 }
+// Mapping functions to window for module access
+window.getStu = getStu;
+window.stuTotal = stuTotal;
+window.getRubric = getRubric;
+
 function fmtDate(){ return new Intl.DateTimeFormat('en-US',{year:'numeric',month:'long',day:'numeric'}).format(new Date()); }
 function uid(){ return Math.random().toString(36).slice(2,10); }
 
