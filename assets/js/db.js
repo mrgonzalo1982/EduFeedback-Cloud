@@ -79,7 +79,8 @@ export async function completeSignInWithEmailLink() {
                 window.localStorage.removeItem('emailForSignIn');
                 return result.user;
             } catch (e) {
-                console.error("Sign-in Link Error:", e);
+                console.error("Sign-in Link Error Code:", e.code);
+                console.error("Sign-in Link Error Message:", e.message);
                 throw e;
             }
         }

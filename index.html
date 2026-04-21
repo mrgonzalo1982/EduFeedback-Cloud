@@ -623,10 +623,15 @@
       const user = await completeSignInWithEmailLink();
       if (user) {
         showToast("Success! Logged in via email.", "var(--green)");
-        // UI will be updated by onAuthStateChanged in db.js
       }
     } catch (e) {
-      showToast("Error completing link sign-in", "var(--red)");
+      console.error("Sign-in Link Error Code:", e.code);
+      console.error("Sign-in Link Error Message:", e.message);
+      let msg = "Error completing sign-in: " + e.message;
+      if (e.code === 'auth/invalid-action-code') msg = "Invalid or expired link";
+      if (e.code === 'auth/email-mismatch') msg = "Email doesn't match the link";
+      if (e.code === 'auth/unauthorized-domain') msg = "Domain not whitelisted in Firebase";
+      showToast(msg, "var(--red)");
     }
 
     // Initialize EmailJS with Public Key if available
