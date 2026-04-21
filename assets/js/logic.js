@@ -1,9 +1,8 @@
 /* =====================================================================
    STATE
 ===================================================================== */
-let STUDENTS = DEFAULT_STUDENTS; // Initialized from data.js
-
-const ST = {
+window.STUDENTS = DEFAULT_STUDENTS; // Initialized from data.js
+window.ST = {
   level:'6', section:'1',
   selecting:false, selected:[],
   groups:{}, evals:{},

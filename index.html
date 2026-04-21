@@ -315,7 +315,21 @@
         showToast("Reset to institutional config", "var(--blue)");
         setTimeout(() => location.reload(), 1000);
     }
-    ...
+
+    // 2. EmailJS
+    const sId = document.getElementById('emailjs-service-id').value.trim();
+    const tId = document.getElementById('emailjs-template-id').value.trim();
+    const pKey = document.getElementById('emailjs-public-key').value.trim();
+    
+    if(sId) localStorage.setItem('ef_emailjs_service_id', sId);
+    if(tId) localStorage.setItem('ef_emailjs_template_id', tId);
+    if(pKey) {
+        localStorage.setItem('ef_emailjs_public_key', pKey);
+        emailjs.init(pKey);
+    }
+    
+    showToast("Configurations saved!", "var(--green)");
+    closeModal('modal-firebase');
   };
 
   window.handleManualPush = async () => {
