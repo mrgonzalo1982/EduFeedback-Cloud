@@ -75,7 +75,16 @@
     <div class="login-card">
       <div class="login-logo">🎓 EduFeedback</div>
       <p style="color:var(--text2); margin-bottom: 30px;">Sign in to access your assessment dashboard or student portal.</p>
-      <button class="btn btn-primary" style="width:100%; padding:14px; font-size:16px" onclick="handleLogin()">Sign in with Google</button>
+      <div style="margin-bottom: 20px;">
+        <input type="email" id="login-email" class="inp" placeholder="your.email@uai.cl" style="margin-bottom:10px; text-align:center">
+        <button id="btn-email-link" class="btn btn-secondary" style="width:100%; padding:12px;" onclick="handleEmailLinkLogin()">Send Login Link</button>
+      </div>
+      <div style="display:flex; align-items:center; margin: 20px 0; color:var(--text3); font-size:12px">
+        <hr style="flex:1; border:none; border-top:1px solid var(--border)">
+        <span style="padding:0 10px">OR</span>
+        <hr style="flex:1; border:none; border-top:1px solid var(--border)">
+      </div>
+      <button class="btn btn-ghost" style="width:100%; padding:12px; border:1px solid var(--border)" onclick="handleLogin()">Sign in with Google</button>
       <div style="margin-top:20px; font-size:12px; color:var(--text3)">
         <p>Your data is stored securely in Firebase.</p>
         <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="openModal('modal-firebase')">⚙ Setup Cloud Credentials</button>
@@ -366,7 +375,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script type="module">
-  import { initFirebase, loginWithGoogle, logout, currentUser, saveToCloud, saveGroqKeyToCloud, forcePushLocalToCloud, forcePullFromCloud, broadcastGroupResults } from './assets/js/db.js?v=9';
+  import { initFirebase, loginWithGoogle, logout, currentUser, saveToCloud, saveGroqKeyToCloud, forcePushLocalToCloud, forcePullFromCloud, broadcastGroupResults, sendLoginLink, completeSignInWithEmailLink } from './assets/js/db.js?v=9';
   import './assets/js/student.js?v=9';
 
   window.broadcastGroupResults = broadcastGroupResults;
@@ -374,10 +383,31 @@
   // Make them available globally for the logic.js to call
   window.handleLogin = async () => {
     try {
-      showToast("Conectando con Google...", "var(--purple)");
+      showToast("Connecting with Google...", "var(--purple)");
       await loginWithGoogle();
     } catch (e) {
-      alert("Error al iniciar sesión. Revisa la consola.");
+      alert("Login error. Check console.");
+    }
+  };
+
+  window.handleEmailLinkLogin = async () => {
+    const email = document.getElementById('login-email').value.trim();
+    if (!email) {
+      showToast("Please enter your email", "var(--red)");
+      return;
+    }
+    const btn = document.getElementById('btn-email-link');
+    const originalText = btn.innerHTML;
+    try {
+      btn.disabled = true;
+      btn.innerHTML = `<i class="ai-spin">⏳</i> Sending...`;
+      await sendLoginLink(email);
+      showToast("Link sent! Check your inbox.", "var(--green)");
+      btn.innerHTML = "Check your email ✓";
+    } catch (e) {
+      showToast("Error sending link", "var(--red)");
+      btn.disabled = false;
+      btn.innerHTML = originalText;
     }
   };
 
@@ -452,7 +482,7 @@
     console.log("Logged in as:", user.email);
     
     // Redirect students
-    if (user.email.endsWith("@alumnos.uai.cl")) {
+    if (user.email.endsWith("@alumnos.uai.cl") || user.email.endsWith("@edu.uai.cl")) {
       window.isStudent = true;
       document.getElementById('stu-display-name').textContent = user.displayName.split(' ')[0];
       showScreen('student-portal');
@@ -567,7 +597,8 @@
       
       saveToCloud({
         groups: ST.groups,
-        evals: ST.evals
+        evals: ST.evals,
+        students: window.STUDENTS
       }).then(() => {
         if (indicator) indicator.style.opacity = '1';
       });
@@ -584,8 +615,20 @@
     oldSaveAI();
   };
 
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
     init();
+
+    // Check for Email Link sign-in
+    try {
+      const user = await completeSignInWithEmailLink();
+      if (user) {
+        showToast("Success! Logged in via email.", "var(--green)");
+        // UI will be updated by onAuthStateChanged in db.js
+      }
+    } catch (e) {
+      showToast("Error completing link sign-in", "var(--red)");
+    }
+
     // Initialize EmailJS with Public Key if available
     const emailKey = localStorage.getItem('ef_emailjs_public_key');
     if (emailKey) emailjs.init(emailKey);

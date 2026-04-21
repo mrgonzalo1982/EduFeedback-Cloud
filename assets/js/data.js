@@ -74,7 +74,8 @@ const DEFAULT_STUDENTS = {
       {"id": "s7_1_19", "fn": "Francisca Amelia", "ln": "Sanchez Arizaga", "email": "francisanchez@alumnos.uai.cl"},
       {"id": "s7_1_20", "fn": "Jos\u00e9 Ignacio", "ln": "Silva Carrillo", "email": "joseigsilva@alumnos.uai.cl"},
       {"id": "s7_1_21", "fn": "Marcelo Alberto", "ln": "V\u00e1squez Campos", "email": "marcelovasquez@alumnos.uai.cl"},
-      {"id": "s7_1_22", "fn": "Agust\u00edn Arturo", "ln": "Zambrano Mart\u00ednez", "email": "agzambrano@alumnos.uai.cl"}
+      {"id": "s7_1_22", "fn": "Agust\u00edn Arturo", "ln": "Zambrano Mart\u00ednez", "email": "agzambrano@alumnos.uai.cl"},
+      {"id": "test_stu", "fn": "Gonzalo", "ln": "Flores", "email": "gonzaloandres.flores@edu.uai.cl"}
     ],
     '2': [
       {"id": "s7_2_1", "fn": "Vicente Ignacio", "ln": "Aravena Espinoza", "email": "vicaravena@alumnos.uai.cl"},

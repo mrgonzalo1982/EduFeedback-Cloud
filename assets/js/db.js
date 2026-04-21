@@ -2,7 +2,7 @@
    FIREBASE ENGINE — AUTH & FIRESTORE
 ===================================================================== */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 export let app, auth, db;
@@ -45,6 +45,46 @@ export async function loginWithGoogle() {
         console.error("Login Error:", e);
         throw e;
     }
+}
+
+export async function sendLoginLink(email) {
+    const actionCodeSettings = {
+        // URL you want to redirect back to. The domain (www.example.com) for this
+        // URL must be whitelisted in the Firebase Console.
+        url: window.location.href.split('#')[0], // Use current URL without hash
+        handleCodeInApp: true,
+    };
+
+    try {
+        await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+        window.localStorage.setItem('emailForSignIn', email);
+        return true;
+    } catch (e) {
+        console.error("Link Send Error:", e);
+        throw e;
+    }
+}
+
+export async function completeSignInWithEmailLink() {
+    if (isSignInWithEmailLink(auth, window.location.href)) {
+        let email = window.localStorage.getItem('emailForSignIn');
+        if (!email) {
+            // User opened the link on a different device. To prevent session fixation
+            // attacks, ask the user to provide the associated email again.
+            email = window.prompt('Please provide your email for confirmation');
+        }
+        if (email) {
+            try {
+                const result = await signInWithEmailLink(auth, email, window.location.href);
+                window.localStorage.removeItem('emailForSignIn');
+                return result.user;
+            } catch (e) {
+                console.error("Sign-in Link Error:", e);
+                throw e;
+            }
+        }
+    }
+    return null;
 }
 
 export async function logout() {
@@ -112,6 +152,38 @@ function mergeLocalAndCloud(cloudData) {
         }
     }
 
+    // Merge Students
+    if (cloudData.students) {
+        // If local is default, just take cloud
+        if (!window.STUDENTS || window.STUDENTS === window.DEFAULT_STUDENTS) {
+            window.STUDENTS = cloudData.students;
+            changed = true;
+        } else {
+            // Complex merge: cloud students win for overlapping IDs
+            for (const lvl in cloudData.students) {
+                if (!window.STUDENTS[lvl]) {
+                    window.STUDENTS[lvl] = cloudData.students[lvl];
+                    changed = true;
+                } else {
+                    for (const sec in cloudData.students[lvl]) {
+                        if (!window.STUDENTS[lvl][sec]) {
+                            window.STUDENTS[lvl][sec] = cloudData.students[lvl][sec];
+                            changed = true;
+                        } else {
+                            // Merge students within section
+                            cloudData.students[lvl][sec].forEach(cs => {
+                                if (!window.STUDENTS[lvl][sec].find(ls => ls.id === cs.id)) {
+                                    window.STUDENTS[lvl][sec].push(cs);
+                                    changed = true;
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     if (changed) {
         if (window.renderDash) window.renderDash();
         // If we merged news from cloud, no need to push back immediately 
@@ -166,8 +238,9 @@ function applyCloudSnapshot(data) {
     }
 
     if (data.students) {
-        // For students, we'll take the cloud version if local is empty/default
-        if (window.STUDENTS === window.DEFAULT_STUDENTS) {
+        // More robust check: if cloud has students, and we either have default or different count, sync.
+        // For now, simpler: cloud version is the source of truth if it exists.
+        if (JSON.stringify(window.STUDENTS) !== JSON.stringify(data.students)) {
             window.STUDENTS = data.students;
             changed = true;
         }
@@ -181,7 +254,8 @@ export async function forcePushLocalToCloud() {
     console.log("Force-syncing Local data to Cloud...");
     await saveToCloud({
         groups: window.ST.groups,
-        evals: window.ST.evals
+        evals: window.ST.evals,
+        students: window.STUDENTS
     });
 }
 
