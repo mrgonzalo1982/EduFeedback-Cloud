@@ -138,16 +138,39 @@ function applyCloudSnapshot(data) {
     }
 
     if (data.groups) {
-        window.ST.groups = data.groups;
-        changed = true;
+        // MERGE instead of overwrite
+        for (const key in data.groups) {
+            if (!window.ST.groups[key]) {
+                window.ST.groups[key] = data.groups[key];
+                changed = true;
+            } else {
+                // Merge groups within section if they are different
+                data.groups[key].forEach(cg => {
+                    if (!window.ST.groups[key].find(lg => lg.id === cg.id)) {
+                        window.ST.groups[key].push(cg);
+                        changed = true;
+                    }
+                });
+            }
+        }
     }
+    
     if (data.evals) {
-        window.ST.evals = data.evals;
-        changed = true;
+        // MERGE evals
+        for (const id in data.evals) {
+            if (!window.ST.evals[id]) {
+                window.ST.evals[id] = data.evals[id];
+                changed = true;
+            }
+        }
     }
+
     if (data.students) {
-        window.STUDENTS = data.students;
-        changed = true;
+        // For students, we'll take the cloud version if local is empty/default
+        if (window.STUDENTS === window.DEFAULT_STUDENTS) {
+            window.STUDENTS = data.students;
+            changed = true;
+        }
     }
     
     if (changed && window.renderDash) window.renderDash();

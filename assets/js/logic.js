@@ -1177,10 +1177,26 @@ function importData(e){
   const r = new FileReader();
   r.onload = ev => { 
     const d = JSON.parse(ev.target.result); 
-    Object.assign(ST, d); 
+    
+    // Merge instead of simple Object.assign to prevent clobbering sections
+    if (d.groups) {
+      for (const k in d.groups) {
+        if (!ST.groups[k]) ST.groups[k] = d.groups[k];
+        else {
+          // Merge groups within section if not duplicates
+          d.groups[k].forEach(g => {
+            if (!ST.groups[k].find(lg => lg.id === g.id)) ST.groups[k].push(g);
+          });
+        }
+      }
+    }
+    if (d.evals) Object.assign(ST.evals, d.evals);
+    if (d.customStudents) STUDENTS = d.customStudents;
+    if (d.aiProvider) ST.aiProvider = d.aiProvider;
+
     renderDash(); 
     if(typeof persist === 'function') persist();
-    showToast("Data imported and synced!", "var(--green)");
+    showToast("Data merged and synced!", "var(--green)");
   };
   r.readAsText(f);
 }
