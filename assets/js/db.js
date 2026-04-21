@@ -185,6 +185,22 @@ export async function forcePushLocalToCloud() {
     });
 }
 
+export async function forcePullFromCloud() {
+    if (!currentUser || !window.ST) return;
+    console.log("Manual pull from cloud requested...");
+    const userRef = doc(db, "users", currentUser.uid);
+    try {
+        const snap = await getDoc(userRef);
+        if (snap.exists()) {
+            mergeLocalAndCloud(snap.data());
+        } else {
+            console.log("No cloud data found to pull.");
+        }
+    } catch (e) {
+        console.error("Force Pull Error:", e);
+    }
+}
+
 export async function saveToCloud(data) {
     if (!currentUser) return;
     try {
